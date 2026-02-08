@@ -17,7 +17,7 @@ images/
 *.tmp
 .DS_Store
 Thumbs.db
-ap*.link.txt
+# ap*.link.txt
 
 # IDE files
 .vscode/

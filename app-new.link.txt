@@ -1,0 +1,6 @@
+https://linuxcontainers.org/incus-os/introduction/
+https://github.com/bmad-code-org/BMAD-METHOD
+https://lasuite.numerique.gouv.fr/
+https://opencode.ai/
+https://github.com/openclaw/openclaw
+https://www.remotion.dev/
