@@ -1,8 +1,0 @@
-https://guacamole.apache.org/
-https://airflow.apache.org/
-https://pulsar.apache.org/
-https://hadoop.apache.org/
-https://spark.apache.org/
-https://dokploy.com/
-https://openfeature.dev/
-https://gofeatureflag.org/
