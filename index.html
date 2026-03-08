@@ -508,6 +508,7 @@
 
         // Autoplay au premier clic/touche sur la page (une seule fois)
         let audioInitialized = false;
+        const wasAudioEnabled = localStorage.getItem(STORAGE_KEY_AUDIO);
 
         function autoplayOnInteraction() {
             if (isPlaying || audioInitialized) return;
@@ -517,9 +518,12 @@
             document.removeEventListener('keydown', autoplayOnInteraction);
         }
 
-        // Écouter uniquement si l'audio n'a jamais été initialisé dans cette session
-        document.addEventListener('click', autoplayOnInteraction);
-        document.addEventListener('keydown', autoplayOnInteraction);
+        // Autoplay seulement si : première visite (null) OU son activé ('true')
+        // Si l'utilisateur a mis pause ('false'), ne pas relancer
+        if (wasAudioEnabled !== 'false') {
+            document.addEventListener('click', autoplayOnInteraction);
+            document.addEventListener('keydown', autoplayOnInteraction);
+        }
 
         // Raccourcis clavier
         document.addEventListener('keydown', (e) => {
