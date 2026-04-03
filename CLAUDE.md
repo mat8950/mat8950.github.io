@@ -82,6 +82,7 @@ Utilitaires/
   Systeme & Boot
   Remote Desktop
   Dashboards & Homepages
+  Capture d'ecran
   Applications KDE
 
 Experimental & Projets GitHub   (UNIQUEMENT si aucune categorie ne correspond)
@@ -108,11 +109,15 @@ A la fin, afficher un tableau recapitulatif :
 
 Statut = "ajoute", "doublon ignore", ou "categorie a confirmer"
 
-### 7. Interdictions
+### 7. Archivage obligatoire
+Apres avoir traite tous les liens et vide `app-new.link.txt`, copier le contenu original de `app-new.link.txt` (les URLs traitees) a la fin de `app.link.txt`. Ce fichier est l'historique de tous les liens jamais traites.
+
+### 8. Interdictions
 - Ne jamais mettre un lien dans "Experimental" par defaut si une categorie existe
 - Ne jamais deviner la categorie sans avoir visite l'URL
 - Ne jamais modifier les liens existants
 - Ne jamais changer la structure HTML existante
+- Ne jamais oublier d'archiver dans app.link.txt apres traitement
 
 # CLAUDE.md — Bookmark Manager
 
@@ -138,6 +143,7 @@ Test local : `docker compose up -d` → http://localhost:8080
 ### Fichiers clés
 - `bookmarks.html` — source unique des données, format Netscape Bookmark
 - `app-new.link.txt` — liens à ajouter (effacer après traitement)
+- `app.link.txt` — archive de tous les liens jamais traités (append après chaque traitement)
 - `script.js` — parse `bookmarks.html` au chargement
 
 ### Processus d'ajout de liens
