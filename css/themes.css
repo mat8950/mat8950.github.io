@@ -1,0 +1,658 @@
+/* ==============================================
+   THEMES — Overrides visuels par thème
+   ============================================== */
+
+/* ==============================================
+   LIGHT / LIGHT-MODE (rétrocompat classe)
+   ============================================== */
+
+body[data-theme="light"] .sidebar,
+body.light-mode:not([data-theme]) .sidebar {
+    border-color: rgba(0,0,0,0.05);
+}
+
+body[data-theme="light"] .sidebar h2,
+body.light-mode:not([data-theme]) .sidebar h2 {
+    border-bottom-color: rgba(0,0,0,0.05);
+}
+
+body[data-theme="light"] .bookmark-card,
+body.light-mode:not([data-theme]) .bookmark-card {
+    border-bottom-color: rgba(0,0,0,0.05);
+}
+
+body[data-theme="light"] .folder-item,
+body.light-mode:not([data-theme]) .folder-item {
+    border-left-color: transparent;
+}
+
+body[data-theme="light"] .folder-item:hover,
+body[data-theme="light"] .folder-item.active,
+body.light-mode:not([data-theme]) .folder-item:hover,
+body.light-mode:not([data-theme]) .folder-item.active {
+    background: rgba(0,0,0,0.03);
+    border-left-color: #000;
+}
+
+body[data-theme="light"] header,
+body.light-mode:not([data-theme]) header { border-bottom-color: rgba(0,0,0,0.05); }
+
+body[data-theme="light"] #search,
+body.light-mode:not([data-theme]) #search {
+    background: rgba(255,255,255,0.9);
+    border-color: rgba(0,0,0,0.15);
+    color: #000;
+}
+
+body[data-theme="light"] #search::placeholder,
+body.light-mode:not([data-theme]) #search::placeholder { color: #888; }
+
+body[data-theme="light"] #search:focus,
+body.light-mode:not([data-theme]) #search:focus {
+    background: #fff;
+    border-color: rgba(0,0,0,0.3);
+}
+
+body[data-theme="light"] .bookmark-card:hover,
+body.light-mode:not([data-theme]) .bookmark-card:hover { background: rgba(0,0,0,0.05); }
+
+body[data-theme="light"] .bookmark-card:hover::before,
+body[data-theme="light"] .bookmark-card:hover .bookmark-title,
+body[data-theme="light"] .bookmark-card:hover::after,
+body.light-mode:not([data-theme]) .bookmark-card:hover::before,
+body.light-mode:not([data-theme]) .bookmark-card:hover .bookmark-title,
+body.light-mode:not([data-theme]) .bookmark-card:hover::after { color: #000; }
+
+body[data-theme="light"] .bookmark-card:hover .bookmark-url,
+body.light-mode:not([data-theme]) .bookmark-card:hover .bookmark-url {
+    color: rgba(0,0,0,0.6);
+    opacity: 1;
+}
+
+body[data-theme="light"] .audio-controls,
+body.light-mode:not([data-theme]) .audio-controls { background: transparent; }
+
+body[data-theme="light"] #audio-toggle,
+body.light-mode:not([data-theme]) #audio-toggle {
+    background: rgba(0,0,0,0.05);
+    border-color: rgba(0,0,0,0.2);
+    color: #000;
+}
+
+body[data-theme="light"] #audio-toggle:hover,
+body.light-mode:not([data-theme]) #audio-toggle:hover { background: rgba(0,0,0,0.10); }
+
+body[data-theme="light"] #audio-toggle.playing,
+body.light-mode:not([data-theme]) #audio-toggle.playing {
+    background: rgba(0,0,0,0.10);
+    border-color: rgba(0,0,0,0.3);
+}
+
+body[data-theme="light"] .bookmark-card.keyboard-selected,
+body.light-mode:not([data-theme]) .bookmark-card.keyboard-selected {
+    background: rgba(0,0,0,0.08);
+    outline-color: #000;
+}
+
+body[data-theme="light"] .bookmark-card.keyboard-selected::before,
+body.light-mode:not([data-theme]) .bookmark-card.keyboard-selected::before { color: #000; }
+
+body[data-theme="light"] .bookmark-card.keyboard-selected .bookmark-title,
+body.light-mode:not([data-theme]) .bookmark-card.keyboard-selected .bookmark-title { color: #000; }
+
+body[data-theme="light"] .folder-item.keyboard-selected,
+body.light-mode:not([data-theme]) .folder-item.keyboard-selected {
+    background: rgba(0,0,0,0.08);
+    outline-color: #000;
+}
+
+body[data-theme="light"] .favorites-header,
+body.light-mode:not([data-theme]) .favorites-header {
+    color: #b8860b;
+    border-bottom-color: rgba(184,134,11,0.3);
+}
+
+body[data-theme="light"] .favorites-grid .bookmark-card,
+body.light-mode:not([data-theme]) .favorites-grid .bookmark-card {
+    border-bottom-color: rgba(184,134,11,0.1);
+}
+
+body[data-theme="light"] .favorite-btn:hover,
+body[data-theme="light"] .favorite-btn.active,
+body.light-mode:not([data-theme]) .favorite-btn:hover,
+body.light-mode:not([data-theme]) .favorite-btn.active { color: #b8860b; }
+
+body[data-theme="light"] .theme-option:hover,
+body.light-mode:not([data-theme]) .theme-option:hover { background: rgba(0,0,0,0.05); }
+
+/* ==============================================
+   APPLE — LIQUID GLASS (dark + light partagés)
+   Basé sur vibrancy macOS / iOS 18 WWDC25
+   ============================================== */
+
+body[data-theme^="apple"] {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-family: var(--font-body);
+    letter-spacing: var(--tracking);
+}
+
+/* ---- MIXIN GLASS — appliqué via variables CSS ----
+   Structure 3 couches :
+   1. ::before  = specular highlight (bord haut lumineux)
+   2. element   = backdrop-filter vibrancy + tint
+   3. ::after   = inner glow (profondeur)
+   ------------------------------------------------- */
+
+/* ---- HEADER — barre glass flottante ---- */
+body[data-theme^="apple"] header {
+    background: var(--glass-header);
+    backdrop-filter: var(--blur-regular);
+    -webkit-backdrop-filter: var(--blur-regular);
+    border-bottom: 1px solid var(--border-glass);
+    box-shadow: var(--shadow-glass);
+    position: relative;
+}
+
+/* Specular highlight haut du header */
+body[data-theme^="apple"] header::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        var(--border-inner) 30%,
+        var(--border-inner) 70%,
+        transparent 100%);
+    pointer-events: none;
+}
+
+/* Titre — SF Pro Display, pas de symboles terminal */
+body[data-theme^="apple"] header h1::before,
+body[data-theme^="apple"] header h1::after { display: none; }
+
+body[data-theme^="apple"] header h1 {
+    font-family: var(--font-display, var(--font-body));
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: var(--tracking-display);
+    text-transform: none;
+}
+
+body[data-theme^="apple"] header h1 span {
+    animation: none;
+    overflow: visible;
+    width: auto;
+    white-space: nowrap;
+}
+
+/* ---- SIDEBAR — glass material régulier ---- */
+body[data-theme^="apple"] .sidebar {
+    background: var(--glass-sidebar);
+    backdrop-filter: var(--blur-regular);
+    -webkit-backdrop-filter: var(--blur-regular);
+    border-right: 1px solid var(--border-glass);
+    position: relative;
+}
+
+/* Inner glow droit de la sidebar */
+body[data-theme^="apple"] .sidebar::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 1px; height: 100%;
+    background: linear-gradient(180deg,
+        transparent 0%,
+        var(--border-inner) 20%,
+        var(--border-inner) 80%,
+        transparent 100%);
+    pointer-events: none;
+}
+
+body[data-theme^="apple"] .sidebar h2 {
+    font-family: var(--font-body);
+    text-transform: none;
+    letter-spacing: 0.01em;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    border-bottom-color: var(--border-color);
+}
+
+/* ---- FOLDER ITEMS sidebar ---- */
+body[data-theme^="apple"] .folder-item {
+    font-family: var(--font-body);
+    text-transform: none;
+    letter-spacing: -0.01em;
+    font-size: 0.875rem;
+    font-weight: 400;
+    border-left: none;
+    border-radius: var(--radius-sm);
+    padding: 0.42rem 0.75rem;
+    transition: background 0.18s ease, color 0.18s ease;
+}
+
+body[data-theme^="apple"] .folder-item::before { display: none; }
+
+body[data-theme^="apple"] .folder-item.has-children::after {
+    content: '›';
+    font-size: 1.1rem;
+    font-weight: 300;
+    color: var(--text-muted);
+    margin-left: auto;
+    transition: transform 0.2s ease;
+}
+
+body[data-theme^="apple"] .folder-item.has-children.expanded::after {
+    transform: rotate(90deg);
+    display: inline-block;
+}
+
+body[data-theme^="apple"] .folder-item.has-children.active::after,
+body[data-theme^="apple"] .folder-item.active::after { content: ''; }
+
+/* Hover/active — glass pill */
+body[data-theme^="apple"] .folder-item:hover {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-left: none;
+}
+
+body[data-theme^="apple"] .folder-item.active {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-left: none;
+    font-weight: 500;
+}
+
+body[data-theme^="apple"] .folder-item.keyboard-selected {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-left: none;
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+    border-radius: var(--radius-sm);
+}
+
+body[data-theme^="apple"] .folder-children {
+    border-left: 1px solid var(--accent-dim);
+    margin-left: 0.9rem;
+    padding-left: 0.6rem;
+}
+
+/* ---- FOLDER NAME ---- */
+body[data-theme^="apple"] .folder-name {
+    font-family: var(--font-body);
+    text-transform: none;
+    letter-spacing: -0.01em;
+    font-size: 0.9rem;
+    font-weight: 400;
+}
+
+body[data-theme^="apple"] .folder-name::after { display: none; }
+
+/* ---- FOLDER CARDS (zone contenu) — glass pill ---- */
+body[data-theme^="apple"] .folder-card {
+    background: var(--glass-card);
+    backdrop-filter: var(--blur-thin);
+    -webkit-backdrop-filter: var(--blur-thin);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
+    padding: 1rem 1.1rem;
+    margin-bottom: 6px;
+    transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+    position: relative;
+    isolation: isolate;
+}
+
+/* Specular top */
+body[data-theme^="apple"] .folder-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 10%; right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border-inner), transparent);
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    pointer-events: none;
+}
+
+/* Inner glow */
+body[data-theme^="apple"] .folder-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-md);
+    box-shadow: inset 0 1px 0 var(--border-inner),
+                inset 0 -1px 0 rgba(0,0,0,0.08);
+    pointer-events: none;
+}
+
+body[data-theme^="apple"] .folder-card:hover {
+    background: var(--glass-regular);
+    box-shadow: var(--shadow-glass);
+    transform: translateY(-1px);
+}
+
+body[data-theme^="apple"] .folder-card:hover .folder-name { color: var(--accent); }
+
+/* ---- BREADCRUMB ---- */
+body[data-theme^="apple"] #breadcrumb::before { display: none; }
+
+body[data-theme^="apple"] #breadcrumb {
+    font-family: var(--font-body);
+    text-transform: none;
+    letter-spacing: -0.01em;
+    font-size: 0.8rem;
+    border-bottom-color: var(--border-color);
+}
+
+body[data-theme^="apple"] .breadcrumb-item { color: var(--accent); }
+body[data-theme^="apple"] .breadcrumb-item:hover { opacity: 0.7; }
+body[data-theme^="apple"] .breadcrumb-separator { opacity: 0.4; }
+
+/* INDEX header masqué */
+body[data-theme^="apple"] #bookmarks-grid::before { display: none; }
+
+/* ---- BOOKMARK CARDS ---- */
+body[data-theme^="apple"] .bookmark-card {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.8rem 0.75rem;
+    border-radius: 0;
+    transition: background 0.18s ease, border-radius 0.18s ease, padding 0.15s ease;
+}
+
+body[data-theme^="apple"] .bookmark-card::before { display: none; }
+
+/* Hover — glass pill inline */
+body[data-theme^="apple"] .bookmark-card:hover {
+    background: var(--glass-card);
+    backdrop-filter: var(--blur-thin);
+    -webkit-backdrop-filter: var(--blur-thin);
+    border-bottom-color: transparent;
+    border-radius: var(--radius-sm);
+    padding-left: 1rem;
+    box-shadow: inset 0 1px 0 var(--border-inner),
+                0 2px 8px rgba(0,0,0,0.12);
+}
+
+body[data-theme^="apple"] .bookmark-card:hover::after { color: var(--accent); }
+body[data-theme^="apple"] .bookmark-card:hover .bookmark-title { color: var(--accent); }
+body[data-theme^="apple"] .bookmark-card:hover .bookmark-url {
+    color: var(--accent-secondary);
+    opacity: 0.75;
+}
+
+/* Keyboard selection */
+body[data-theme^="apple"] .bookmark-card.keyboard-selected {
+    background: var(--glass-card);
+    backdrop-filter: var(--blur-thin);
+    -webkit-backdrop-filter: var(--blur-thin);
+    border-radius: var(--radius-sm);
+    border-bottom-color: transparent;
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+}
+
+body[data-theme^="apple"] .bookmark-card.keyboard-selected::before { display: none; }
+body[data-theme^="apple"] .bookmark-card.keyboard-selected .bookmark-title { color: var(--accent); }
+
+/* ---- TYPOGRAPHIE BOOKMARKS ---- */
+body[data-theme^="apple"] .bookmark-title {
+    font-family: var(--font-body);
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: -0.015em;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+body[data-theme^="apple"] .bookmark-url {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0;
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+/* ---- SEARCH — glass pill ---- */
+body[data-theme^="apple"] #search {
+    background: var(--glass-regular);
+    backdrop-filter: var(--blur-thin);
+    -webkit-backdrop-filter: var(--blur-thin);
+    border: 1px solid var(--border-glass);
+    border-radius: 100px;
+    letter-spacing: -0.01em;
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    box-shadow: inset 0 1px 0 var(--border-inner), var(--shadow-card);
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+body[data-theme^="apple"] #search::placeholder {
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--text-muted);
+}
+
+body[data-theme^="apple"] #search:focus {
+    background: var(--glass-thick);
+    box-shadow: inset 0 1px 0 var(--border-inner),
+                0 0 0 3px var(--accent-dim),
+                var(--shadow-card);
+    border-color: var(--accent);
+    outline: none;
+}
+
+/* ---- THEME SELECTOR — glass pill ---- */
+body[data-theme^="apple"] #theme-selector-btn {
+    background: var(--glass-regular);
+    backdrop-filter: var(--blur-thin);
+    -webkit-backdrop-filter: var(--blur-thin);
+    border: 1px solid var(--border-glass);
+    border-radius: 100px;
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    text-transform: none;
+    box-shadow: inset 0 1px 0 var(--border-inner), var(--shadow-card);
+    transition: background 0.2s ease;
+}
+
+body[data-theme^="apple"] #theme-selector-btn:hover {
+    background: var(--glass-thick);
+    border-color: var(--border-bright);
+}
+
+body[data-theme^="apple"] .theme-panel {
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-glass);
+    background: var(--glass-thick);
+    backdrop-filter: var(--blur-thick);
+    -webkit-backdrop-filter: var(--blur-thick);
+    box-shadow: var(--shadow-glass);
+    overflow: hidden;
+}
+
+body[data-theme^="apple"] .theme-option {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    text-transform: none;
+    letter-spacing: -0.01em;
+    font-weight: 400;
+}
+
+body[data-theme^="apple"] .theme-option:hover {
+    background: var(--accent-dim);
+    color: var(--accent);
+}
+
+body[data-theme^="apple"] .theme-option.active { color: var(--accent); font-weight: 500; }
+
+/* ---- AUDIO CONTROLS — glass pill ---- */
+body[data-theme^="apple"] #audio-controls {
+    background: var(--glass-thick);
+    backdrop-filter: var(--blur-regular);
+    -webkit-backdrop-filter: var(--blur-regular);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-xl);
+    box-shadow: inset 0 1px 0 var(--border-inner), var(--shadow-glass);
+}
+
+body[data-theme^="apple"] #audio-toggle {
+    background: var(--glass-regular);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    letter-spacing: 0;
+    text-transform: none;
+    font-weight: 500;
+    box-shadow: inset 0 1px 0 var(--border-inner);
+    transition: background 0.2s ease;
+}
+
+body[data-theme^="apple"] #audio-toggle:hover {
+    background: var(--glass-thick);
+}
+
+body[data-theme^="apple"] #audio-toggle.playing {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* ---- EMPTY STATE ---- */
+body[data-theme^="apple"] #empty-state p {
+    font-family: var(--font-body);
+    text-transform: none;
+    letter-spacing: -0.01em;
+    font-size: 0.95rem;
+    font-weight: 400;
+}
+
+body[data-theme^="apple"] #empty-state svg    { display: block; color: var(--text-muted); margin-bottom: 1rem; }
+body[data-theme^="apple"] #empty-state::after { display: none; }
+
+/* ---- SCROLLBAR ---- */
+body[data-theme^="apple"] ::-webkit-scrollbar       { width: 4px; }
+body[data-theme^="apple"] ::-webkit-scrollbar-thumb { border-radius: 4px; background: rgba(128,128,128,0.25); }
+body[data-theme^="apple"] ::-webkit-scrollbar-thumb:hover { background: rgba(128,128,128,0.45); }
+
+/* ---- FOCUS ---- */
+body[data-theme^="apple"] :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+}
+
+/* ---- APPLE LIGHT spécifique ---- */
+body[data-theme="apple-light"] .sidebar { border-right-color: rgba(0,0,0,0.08); }
+body[data-theme="apple-light"] header   { border-bottom-color: rgba(0,0,0,0.08); }
+
+body[data-theme="apple-light"] .bookmark-card:hover {
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.9),
+                0 2px 8px rgba(0,0,0,0.07);
+}
+
+body[data-theme="apple-light"] #search {
+    color: var(--text-primary);
+}
+
+body[data-theme="apple-light"] .theme-option:hover {
+    background: rgba(0,122,255,0.08);
+}
+
+/* ---- APPLE DARK spécifique ---- */
+body[data-theme="apple-dark"] .bookmark-card:hover {
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.18),
+                0 4px 16px rgba(0,0,0,0.35);
+}
+
+/* ==============================================
+   NORD
+   ============================================== */
+
+body[data-theme="nord"] .folder-item:hover,
+body[data-theme="nord"] .folder-item.active {
+    background: rgba(136,192,208,0.09);
+    border-left-color: var(--accent);
+    color: var(--accent);
+}
+
+body[data-theme="nord"] .folder-item.keyboard-selected {
+    background: rgba(136,192,208,0.12);
+    border-left-color: var(--accent);
+    outline-color: var(--accent);
+    color: var(--accent);
+}
+
+body[data-theme="nord"] .bookmark-card:hover { background: rgba(136,192,208,0.07); }
+
+body[data-theme="nord"] .bookmark-card:hover::before,
+body[data-theme="nord"] .bookmark-card:hover .bookmark-title,
+body[data-theme="nord"] .bookmark-card:hover::after { color: var(--accent); }
+
+body[data-theme="nord"] .bookmark-card:hover .bookmark-url {
+    color: var(--accent-secondary);
+    opacity: 0.8;
+}
+
+body[data-theme="nord"] .bookmark-card.keyboard-selected {
+    background: rgba(136,192,208,0.09);
+    outline-color: var(--accent);
+}
+
+body[data-theme="nord"] :focus-visible { outline-color: var(--accent); }
+
+body[data-theme="nord"] ::-webkit-scrollbar-thumb       { background: rgba(136,192,208,0.35); }
+body[data-theme="nord"] ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+body[data-theme="nord"] .favorites-header { color: #a3be8c; border-bottom-color: rgba(163,190,140,0.3); }
+
+/* ==============================================
+   DRACULA
+   ============================================== */
+
+body[data-theme="dracula"] .folder-item:hover,
+body[data-theme="dracula"] .folder-item.active {
+    background: rgba(255,121,198,0.09);
+    border-left-color: var(--accent);
+    color: var(--accent);
+}
+
+body[data-theme="dracula"] .folder-item.keyboard-selected {
+    background: rgba(255,121,198,0.12);
+    border-left-color: var(--accent);
+    outline-color: var(--accent);
+    color: var(--accent);
+}
+
+body[data-theme="dracula"] .bookmark-card:hover { background: rgba(255,121,198,0.07); }
+
+body[data-theme="dracula"] .bookmark-card:hover::before,
+body[data-theme="dracula"] .bookmark-card:hover .bookmark-title,
+body[data-theme="dracula"] .bookmark-card:hover::after { color: var(--accent); }
+
+body[data-theme="dracula"] .bookmark-card:hover .bookmark-url {
+    color: var(--accent-secondary);
+    opacity: 0.8;
+}
+
+body[data-theme="dracula"] .bookmark-card.keyboard-selected {
+    background: rgba(255,121,198,0.09);
+    outline-color: var(--accent);
+}
+
+body[data-theme="dracula"] :focus-visible { outline-color: var(--accent); }
+
+body[data-theme="dracula"] ::-webkit-scrollbar-thumb       { background: rgba(189,147,249,0.35); }
+body[data-theme="dracula"] ::-webkit-scrollbar-thumb:hover { background: var(--accent-secondary); }
+
+body[data-theme="dracula"] .bookmark-url { font-style: italic; }
+
+body[data-theme="dracula"] .favorites-header { color: #f1fa8c; border-bottom-color: rgba(241,250,140,0.3); }

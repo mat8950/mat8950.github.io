@@ -1,0 +1,77 @@
+/* ==============================================
+   RESPONSIVE — Adaptations écran
+   Note : la taille de police de base est gérée par
+   clamp() dans base.css — pas de font-size ici.
+   ============================================== */
+
+/* ---- TRÈS GRANDES RÉSOLUTIONS (2K+) ---- */
+@media (min-width: 1440px) {
+    .sidebar h2    { font-size: 0.7rem; }
+    .folder-item   { padding: 0.6rem 0.85rem; font-size: 0.8rem; }
+    .bookmark-card { padding: 1.1rem 0; }
+    .bookmark-title { font-size: 0.85rem; }
+    .bookmark-url   { font-size: 0.7rem; }
+    .bookmark-icon img { width: 26px; height: 26px; }
+}
+
+@media (min-width: 1920px) {
+    .sidebar h2    { font-size: 0.75rem; }
+    .folder-item   { padding: 0.7rem 1rem; font-size: 0.88rem; }
+    .bookmark-card { padding: 1.25rem 0; }
+    .bookmark-title { font-size: 0.92rem; }
+    .bookmark-url   { font-size: 0.73rem; }
+    .bookmark-icon img { width: 30px; height: 30px; }
+    header h1 { font-size: 0.9rem; }
+}
+
+@media (min-width: 2560px) {
+    .sidebar h2   { font-size: 0.85rem; }
+    .folder-item  { padding: 0.85rem 1.2rem; font-size: 0.95rem; }
+    .bookmark-card { padding: 1.35rem 0; }
+    .bookmark-title { font-size: 1rem; }
+    .bookmark-url   { font-size: 0.78rem; }
+    .bookmark-icon img { width: 36px; height: 36px; }
+    header h1 { font-size: 1rem; }
+}
+
+@media (min-width: 3200px) {
+    .bookmark-icon img { width: 42px; height: 42px; }
+}
+
+/* ---- TABLETTE ---- */
+@media (max-width: 900px) {
+    #audio-controls {
+        bottom: 1rem; right: 1rem;
+        padding: 0.4rem 0.6rem;
+    }
+}
+
+/* ---- MOBILE ---- */
+@media (max-width: 768px) {
+    .container { flex-direction: column; }
+
+    .sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        max-height: 180px;
+    }
+
+    #search { width: 140px; }
+
+    .bookmark-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.2rem;
+    }
+
+    .bookmark-title { min-width: auto; }
+
+    #audio-controls { bottom: 0.5rem; right: 0.5rem; font-size: 0.6rem; }
+    #volume-slider  { width: 30px; }
+
+    .header-controls { gap: 0.5rem; }
+
+    #theme-selector-btn { padding: 0.4rem 0.55rem; font-size: 0.6rem; }
+    #theme-label { display: none; }
+}

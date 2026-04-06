@@ -1,0 +1,244 @@
+/* ==============================================
+   VARIABLES — Polices + tokens CSS par thème
+   ============================================== */
+
+/* ---- FONTS ---- */
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap');
+
+/* ---- DARK (défaut) ---- */
+:root {
+    /* Surfaces */
+    --bg-primary:   #000000;
+    --bg-secondary: rgba(0, 0, 0, 0.85);
+    --bg-tertiary:  rgba(10, 10, 10, 0.9);
+    --bg-terminal:  #000000;
+    --bg-glass:     rgba(0, 0, 0, 0.7);
+
+    /* Texte */
+    --text-primary:   #ffffff;
+    --text-secondary: #cccccc;
+    --text-dim:       #888888;
+    --text-highlight: #ffffff;
+    --text-muted:     #666666;
+
+    /* Accent */
+    --accent:           #ffffff;
+    --accent-secondary: #aaaaaa;
+    --accent-dim:       #555555;
+
+    /* Bordures */
+    --border-color:  rgba(255, 255, 255, 0.10);
+    --border-bright: rgba(255, 255, 255, 0.25);
+    --border-strong: rgba(255, 255, 255, 0.40);
+    --glow-white:    0 0 20px rgba(255, 255, 255, 0.10);
+
+    /* Layout */
+    --sidebar-width: clamp(220px, 20vw, 500px);
+
+    /* Police — terminal */
+    --font-body: 'Fira Code', 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+    --font-mono: 'Fira Code', 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+}
+
+/* ---- LIGHT ---- */
+body[data-theme="light"],
+body.light-mode:not([data-theme]) {
+    --bg-primary:   #ffffff;
+    --bg-secondary: rgba(255, 255, 255, 0.95);
+    --bg-tertiary:  rgba(250, 250, 250, 0.95);
+    --bg-terminal:  #ffffff;
+    --bg-glass:     rgba(255, 255, 255, 0.90);
+    --text-primary:   #000000;
+    --text-secondary: #222222;
+    --text-dim:       #555555;
+    --text-highlight: #000000;
+    --text-muted:     #888888;
+    --accent:           #000000;
+    --accent-secondary: #444444;
+    --accent-dim:       rgba(0, 0, 0, 0.07);
+    --border-color:  rgba(0, 0, 0, 0.12);
+    --border-bright: rgba(0, 0, 0, 0.22);
+    --border-strong: rgba(0, 0, 0, 0.38);
+    --glow-white:    0 0 20px rgba(0, 0, 0, 0.06);
+    /* Police — sans-serif humaniste */
+    --font-body: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'Fira Code', 'Consolas', monospace;
+}
+
+/* ---- APPLE DARK ---- */
+body[data-theme="apple-dark"] {
+    /* Page background — deep space macOS wallpaper feel */
+    --bg-primary:   #0a0a0f;
+    --bg-terminal:  #0a0a0f;
+
+    /* Liquid Glass surfaces — vibrancy dark material */
+    /* Thin material  */ --glass-thin:     rgba(255, 255, 255, 0.05);
+    /* Regular        */ --glass-regular:  rgba(255, 255, 255, 0.09);
+    /* Thick          */ --glass-thick:    rgba(255, 255, 255, 0.14);
+    /* Ultra-thick    */ --glass-ultra:    rgba(255, 255, 255, 0.20);
+    /* Sidebar tint   */ --glass-sidebar:  rgba(22, 22, 28, 0.72);
+    /* Header tint    */ --glass-header:   rgba(10, 10, 15, 0.78);
+    /* Card tint      */ --glass-card:     rgba(255, 255, 255, 0.055);
+
+    /* Rétrocompat variables */
+    --bg-secondary: rgba(22, 22, 28, 0.72);
+    --bg-tertiary:  rgba(44, 44, 52, 0.65);
+    --bg-glass:     rgba(22, 22, 28, 0.72);
+
+    /* Texte — SF Pro opacités */
+    --text-primary:   rgba(255, 255, 255, 0.95);
+    --text-secondary: rgba(255, 255, 255, 0.75);
+    --text-dim:       rgba(255, 255, 255, 0.45);
+    --text-highlight: #ffffff;
+    --text-muted:     rgba(255, 255, 255, 0.28);
+
+    /* Accent — Blue Apple */
+    --accent:           #2997ff;
+    --accent-secondary: #409cff;
+    --accent-dim:       rgba(41, 151, 255, 0.18);
+
+    /* Bordures verre — specular highlights */
+    --border-color:   rgba(255, 255, 255, 0.10);
+    --border-bright:  rgba(255, 255, 255, 0.20);
+    --border-strong:  rgba(255, 255, 255, 0.35);
+    --border-glass:   rgba(255, 255, 255, 0.22); /* bord verre principal */
+    --border-inner:   rgba(255, 255, 255, 0.55); /* highlight interne haut */
+
+    /* Shadows */
+    --shadow-glass:   0 8px 32px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-card:    0 4px 16px rgba(0, 0, 0, 0.35);
+    --glow-white:     0 0 40px rgba(41, 151, 255, 0.08);
+
+    /* Blur Apple vibrancy */
+    --blur-thin:    saturate(160%) blur(14px);
+    --blur-regular: saturate(180%) blur(24px);
+    --blur-thick:   saturate(200%) blur(32px);
+
+    /* Border radius Apple */
+    --radius-xl:  22px;
+    --radius-lg:  16px;
+    --radius-md:  12px;
+    --radius-sm:   8px;
+    --radius-xs:   6px;
+
+    /* Police — SF Pro / système */
+    --font-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+    --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', monospace;
+    --font-size-base: 15px;
+    --tracking: -0.022em;
+    --tracking-display: -0.03em;
+}
+
+/* ---- APPLE LIGHT ---- */
+body[data-theme="apple-light"] {
+    /* Page background — ivoire Apple */
+    --bg-primary:   #f2f2f7;
+    --bg-terminal:  #f2f2f7;
+
+    /* Liquid Glass surfaces — vibrancy light material */
+    --glass-thin:     rgba(255, 255, 255, 0.55);
+    --glass-regular:  rgba(255, 255, 255, 0.72);
+    --glass-thick:    rgba(255, 255, 255, 0.82);
+    --glass-ultra:    rgba(255, 255, 255, 0.90);
+    --glass-sidebar:  rgba(242, 242, 247, 0.78);
+    --glass-header:   rgba(242, 242, 247, 0.85);
+    --glass-card:     rgba(255, 255, 255, 0.65);
+
+    /* Rétrocompat */
+    --bg-secondary: rgba(242, 242, 247, 0.78);
+    --bg-tertiary:  rgba(255, 255, 255, 0.82);
+    --bg-glass:     rgba(242, 242, 247, 0.78);
+
+    /* Texte — SF Pro opacités */
+    --text-primary:   rgba(0, 0, 0, 0.88);
+    --text-secondary: rgba(0, 0, 0, 0.65);
+    --text-dim:       rgba(0, 0, 0, 0.45);
+    --text-highlight: #000000;
+    --text-muted:     rgba(0, 0, 0, 0.32);
+
+    /* Accent — Blue Apple iOS */
+    --accent:           #007aff;
+    --accent-secondary: #0071e3;
+    --accent-dim:       rgba(0, 122, 255, 0.12);
+
+    /* Bordures verre */
+    --border-color:   rgba(0, 0, 0, 0.06);
+    --border-bright:  rgba(0, 0, 0, 0.10);
+    --border-strong:  rgba(0, 0, 0, 0.18);
+    --border-glass:   rgba(255, 255, 255, 0.80); /* bord verre haut */
+    --border-inner:   rgba(255, 255, 255, 0.90); /* highlight interne */
+
+    /* Shadows */
+    --shadow-glass: 0 8px 28px rgba(0, 0, 0, 0.10), 0 2px 6px rgba(0, 0, 0, 0.06);
+    --shadow-card:  0 2px 10px rgba(0, 0, 0, 0.08);
+    --glow-white:   0 0 30px rgba(0, 122, 255, 0.06);
+
+    /* Blur Apple vibrancy */
+    --blur-thin:    saturate(180%) blur(14px);
+    --blur-regular: saturate(200%) blur(24px);
+    --blur-thick:   saturate(220%) blur(32px);
+
+    /* Border radius */
+    --radius-xl:  22px;
+    --radius-lg:  16px;
+    --radius-md:  12px;
+    --radius-sm:   8px;
+    --radius-xs:   6px;
+
+    /* Police — SF Pro / système */
+    --font-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+    --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', monospace;
+    --font-size-base: 15px;
+    --tracking: -0.022em;
+    --tracking-display: -0.03em;
+}
+
+/* ---- NORD ---- */
+body[data-theme="nord"] {
+    --bg-primary:   #2e3440;
+    --bg-secondary: rgba(46, 52, 64, 0.95);
+    --bg-tertiary:  rgba(59, 66, 82, 0.95);
+    --bg-terminal:  #2e3440;
+    --bg-glass:     rgba(46, 52, 64, 0.85);
+    --text-primary:   #eceff4;
+    --text-secondary: #e5e9f0;
+    --text-dim:       #d8dee9;
+    --text-highlight: #eceff4;
+    --text-muted:     #81a1c1;
+    --accent:           #88c0d0;
+    --accent-secondary: #81a1c1;
+    --accent-dim:       rgba(136, 192, 208, 0.15);
+    --border-color:  rgba(236, 239, 244, 0.08);
+    --border-bright: rgba(236, 239, 244, 0.14);
+    --border-strong: rgba(136, 192, 208, 0.40);
+    --glow-white:    0 0 20px rgba(136, 192, 208, 0.10);
+    /* Police — IBM Plex Mono (propre, nordique) */
+    --font-body: 'IBM Plex Mono', 'Courier New', monospace;
+    --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+}
+
+/* ---- DRACULA ---- */
+body[data-theme="dracula"] {
+    --bg-primary:   #282a36;
+    --bg-secondary: rgba(40, 42, 54, 0.95);
+    --bg-tertiary:  rgba(68, 71, 90, 0.95);
+    --bg-terminal:  #282a36;
+    --bg-glass:     rgba(40, 42, 54, 0.85);
+    --text-primary:   #f8f8f2;
+    --text-secondary: #e2e0d8;
+    --text-dim:       #bd93f9;
+    --text-highlight: #f8f8f2;
+    --text-muted:     #6272a4;
+    --accent:           #ff79c6;
+    --accent-secondary: #bd93f9;
+    --accent-dim:       rgba(255, 121, 198, 0.12);
+    --border-color:  rgba(248, 248, 242, 0.08);
+    --border-bright: rgba(248, 248, 242, 0.14);
+    --border-strong: rgba(255, 121, 198, 0.40);
+    --glow-white:    0 0 20px rgba(189, 147, 249, 0.15);
+    /* Police — JetBrains Mono avec italique (code editor) */
+    --font-body: 'JetBrains Mono', 'Fira Code', monospace;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}

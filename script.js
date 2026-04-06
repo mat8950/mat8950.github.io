@@ -592,30 +592,94 @@ function createBookmarkCard(bookmark) {
     return card;
 }
 
-// Initialize theme toggle
-function initThemeToggle() {
-    const toggle = document.getElementById('theme-toggle');
+// ===== COULEURS 3D PAR THÈME =====
+const THEME_3D = {
+    'dark':        { grid: '#ffffff', particles: '#ffffff', lines: '#ffffff', cubes: '#ffffff', rings: '#ffffff' },
+    'light':       { grid: '#000000', particles: '#000000', lines: '#000000', cubes: '#000000', rings: '#000000' },
+    'apple-dark':  { grid: '#2997ff', particles: '#2997ff', lines: '#0071e3', cubes: '#2997ff', rings: '#0071e3' },
+    'apple-light': { grid: '#0071e3', particles: '#0071e3', lines: '#0066cc', cubes: '#0071e3', rings: '#0066cc' },
+    'nord':        { grid: '#88c0d0', particles: '#81a1c1', lines: '#88c0d0', cubes: '#5e81ac', rings: '#88c0d0' },
+    'dracula':     { grid: '#ff79c6', particles: '#bd93f9', lines: '#ff79c6', cubes: '#6272a4', rings: '#bd93f9' },
+};
 
-    if (!toggle) {
-        console.error('Theme toggle button not found!');
+// ===== THEME SELECTOR =====
+const THEMES = {
+    'dark':        { label: 'DARK',        light: false },
+    'light':       { label: 'LIGHT',       light: true  },
+    'apple-dark':  { label: 'APPLE DARK',  light: false },
+    'apple-light': { label: 'APPLE LIGHT', light: true  },
+    'nord':        { label: 'NORD',        light: false },
+    'dracula':     { label: 'DRACULA',     light: false },
+};
+
+function applyTheme(theme) {
+    const cfg = THEMES[theme] || THEMES['dark'];
+    document.body.dataset.theme = theme;
+    document.body.classList.toggle('light-mode', cfg.light);
+    document.body.classList.remove('dark-mode');
+
+    const label = document.getElementById('theme-label');
+    if (label) label.textContent = cfg.label;
+
+    document.querySelectorAll('.theme-option').forEach(btn => {
+        const active = btn.dataset.theme === theme;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+
+    localStorage.setItem('theme', theme);
+
+    // Mise à jour fond 3D (disponible seulement après chargement Three.js)
+    if (window.updateScene3DColors) {
+        window.updateScene3DColors(THEME_3D[theme] || THEME_3D['dark']);
+    }
+}
+
+function initThemeToggle() {
+    const btn   = document.getElementById('theme-selector-btn');
+    const panel = document.getElementById('theme-panel');
+
+    if (!btn || !panel) {
+        console.error('Theme selector not found!');
         return;
     }
 
-    // Nettoyer l'ancienne classe dark-mode si présente
-    document.body.classList.remove('dark-mode');
+    // Restaurer le thème sauvegardé (rétrocompat : 'light' → 'light', tout le reste → 'dark')
+    const saved = localStorage.getItem('theme') || 'dark';
+    const theme = THEMES[saved] ? saved : (saved === 'light' ? 'light' : 'dark');
+    applyTheme(theme);
 
-    // Restaurer le thème sauvegardé
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'light') {
-        document.body.classList.add('light-mode');
-    } else {
-        document.body.classList.remove('light-mode');
-    }
+    // Toggle panel
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const open = panel.classList.toggle('open');
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
 
-    toggle.addEventListener('click', () => {
-        document.body.classList.toggle('light-mode');
-        const isLight = document.body.classList.contains('light-mode');
-        localStorage.setItem('theme', isLight ? 'light' : 'dark');
+    // Sélection d'un thème
+    panel.querySelectorAll('.theme-option').forEach(opt => {
+        opt.addEventListener('click', () => {
+            applyTheme(opt.dataset.theme);
+            panel.classList.remove('open');
+            btn.setAttribute('aria-expanded', 'false');
+        });
+    });
+
+    // Fermer panel au clic extérieur
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#theme-selector')) {
+            panel.classList.remove('open');
+            btn.setAttribute('aria-expanded', 'false');
+        }
+    });
+
+    // Fermer panel à Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && panel.classList.contains('open')) {
+            panel.classList.remove('open');
+            btn.setAttribute('aria-expanded', 'false');
+            btn.focus();
+        }
     });
 }
 

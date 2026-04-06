@@ -158,4 +158,15 @@ https://github.com/socprime/detectflow-main
 https://github.com/nullptrlabs/pgmodeler
 https://github.com/nikoksr/notify
 https://github.com/hakwerk/labca
-https://github.com/gravitl/netmaker
+https://github.com/gravitl/netmakerhttps://github.com/yonahd/kor
+https://github.com/HKUDS/FastCode
+https://github.com/alibaba/OpenSandbox
+https://github.com/SigNoz/signoz
+https://github.com/dgunzy/flux9s?tab=readme-ov-file
+https://github.com/gma1k/podtrace
+https://github.com/rtk-ai/rtk
+https://github.com/pgsty/pigsty
+https://github.com/VoltAgent/awesome-design-md/tree/main
+https://github.com/burhanr13/Tanuki3DS
+https://github.com/verilator/verilator
+https://github.com/capcom6/android-sms-gateway

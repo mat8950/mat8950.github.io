@@ -57,11 +57,32 @@
         <div class="header-controls">
             <label for="search" class="visually-hidden">Rechercher des marque-pages</label>
             <input type="text" id="search" placeholder="Rechercher..." aria-label="Rechercher des marque-pages">
-            <button id="theme-toggle" title="Changer de thème" aria-label="Basculer entre mode clair et sombre">
-                <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
-                    <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill="currentColor"/>
-                </svg>
-            </button>
+            <div class="theme-selector" id="theme-selector">
+                <button id="theme-selector-btn" aria-haspopup="listbox" aria-expanded="false" title="Sélectionner un thème">
+                    <span class="btn-swatch"></span>
+                    <span id="theme-label">DARK</span>
+                </button>
+                <div class="theme-panel" id="theme-panel" role="listbox" aria-label="Thèmes disponibles">
+                    <button class="theme-option active" data-theme="dark" role="option" aria-selected="true">
+                        <span class="theme-swatch"></span>Dark
+                    </button>
+                    <button class="theme-option" data-theme="light" role="option" aria-selected="false">
+                        <span class="theme-swatch"></span>Light
+                    </button>
+                    <button class="theme-option" data-theme="apple-dark" role="option" aria-selected="false">
+                        <span class="theme-swatch"></span>Apple Dark
+                    </button>
+                    <button class="theme-option" data-theme="apple-light" role="option" aria-selected="false">
+                        <span class="theme-swatch"></span>Apple Light
+                    </button>
+                    <button class="theme-option" data-theme="nord" role="option" aria-selected="false">
+                        <span class="theme-swatch"></span>Nord
+                    </button>
+                    <button class="theme-option" data-theme="dracula" role="option" aria-selected="false">
+                        <span class="theme-swatch"></span>Dracula
+                    </button>
+                </div>
+            </div>
         </div>
     </header>
 
@@ -287,6 +308,19 @@
                 }
                 scene.add(ringsGroup);
 
+                // === EXPOSE COLOR UPDATER (pour le sélecteur de thème) ===
+                window.__scene3D = { gridMaterial, particlesMaterial, linesGroup, cubesGroup, ringsGroup };
+
+                window.updateScene3DColors = function(cfg) {
+                    if (!window.__scene3D) return;
+                    const s = window.__scene3D;
+                    if (cfg.grid)      s.gridMaterial.color.set(cfg.grid);
+                    if (cfg.particles) s.particlesMaterial.color.set(cfg.particles);
+                    if (cfg.lines)     s.linesGroup.children.forEach(l => l.material.color.set(cfg.lines));
+                    if (cfg.cubes)     s.cubesGroup.children.forEach(c => c.material.color.set(cfg.cubes));
+                    if (cfg.rings)     s.ringsGroup.children.forEach(r => r.material.color.set(cfg.rings));
+                };
+
                 // === MOUSE INTERACTION ===
                 let mouseX = 0, mouseY = 0, targetX = 0, targetY = 0;
 
@@ -445,7 +479,7 @@
             requestAnimationFrame(drawVisualizer);
             analyser.getByteFrequencyData(dataArray);
 
-            const isLightMode = document.body.classList.contains('light-mode');
+            const isLightMode = document.body.classList.contains('light-mode') || document.body.dataset.theme === 'apple-light';
 
             visualizerCtx.clearRect(0, 0, visualizerCanvas.width, visualizerCanvas.height);
 
