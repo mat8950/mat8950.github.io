@@ -170,7 +170,6 @@ https://github.com/VoltAgent/awesome-design-md/tree/main
 https://github.com/burhanr13/Tanuki3DS
 https://github.com/verilator/verilator
 https://github.com/capcom6/android-sms-gateway
-
 https://github.com/quickwit-oss/quickwit
 https://skillsmp.com/fr
 https://bamqam.com/
