@@ -112,12 +112,23 @@ Statut = "ajoute", "doublon ignore", ou "categorie a confirmer"
 ### 7. Archivage obligatoire
 Apres avoir traite tous les liens et vide `app-new.link.txt`, copier le contenu original de `app-new.link.txt` (les URLs traitees) a la fin de `app.link.txt`. Ce fichier est l'historique de tous les liens jamais traites.
 
-### 8. Interdictions
+### 8. Mise à jour du CSV obligatoire
+Après avoir ajouté les liens dans `bookmarks.html`, lancer :
+```bash
+python3 scripts/migrate.py
+```
+Cela met à jour `bookmarks.csv` avec les nouvelles URLs et leur date d'ajout (depuis git history).
+Ensuite, enrichir manuellement les nouvelles entrées dans `bookmarks.csv` avec `description` et `tags` :
+- `description` : 1 phrase résumant l'outil en français (cas d'usage principal)
+- `tags` : mots-clés séparés par `|` (ex: `docker|container|devops`)
+
+### 9. Interdictions
 - Ne jamais mettre un lien dans "Experimental" par defaut si une categorie existe
 - Ne jamais deviner la categorie sans avoir visite l'URL
 - Ne jamais modifier les liens existants
 - Ne jamais changer la structure HTML existante
 - Ne jamais oublier d'archiver dans app.link.txt apres traitement
+- Ne jamais oublier de lancer `scripts/migrate.py` et d'enrichir `bookmarks.csv` apres ajout
 
 # CLAUDE.md — Bookmark Manager
 
@@ -141,10 +152,12 @@ Test local : `docker compose up -d` → http://localhost:8080
 ## 2. Gestion des bookmarks
 
 ### Fichiers clés
-- `bookmarks.html` — source unique des données, format Netscape Bookmark
+- `bookmarks.html` — structure des données (catégories + liens), format Netscape Bookmark
+- `bookmarks.csv` — métadonnées enrichies par URL : `url, name, category, subcategory, description, tags, date_added`
 - `app-new.link.txt` — liens à ajouter (effacer après traitement)
 - `app.link.txt` — archive de tous les liens jamais traités (append après chaque traitement)
-- `script.js` — parse `bookmarks.html` au chargement
+- `script.js` — parse `bookmarks.html` + `bookmarks.csv` au chargement, fusionne par URL
+- `scripts/migrate.py` — génère/met à jour `bookmarks.csv` depuis git history + bookmarks.html
 
 ### Processus d'ajout de liens
 
@@ -248,12 +261,43 @@ Nouvelle sous-catégorie si besoin :
 
 | Fichier | Rôle |
 |---|---|
-| `index.html` | Structure + scripts audio, Three.js, persistance localStorage |
+| `index.html` | Structure + scripts audio, Three.js, persistance localStorage, panels |
 | `styles.css` | Thème dark/light, animations, layout sidebar/content |
-| `script.js` | Parse bookmarks, rendu, navigation clavier, favoris, lazy loading |
-| `bookmarks.html` | Données sources (format Netscape) |
+| `script.js` | Parse bookmarks + CSV, rendu, navigation clavier, favoris, lazy loading, panels |
+| `bookmarks.html` | Structure des données (catégories + liens, format Netscape) |
+| `bookmarks.csv` | Métadonnées enrichies : description, tags, date_added (clé = URL) |
+| `scripts/migrate.py` | Génère/met à jour bookmarks.csv depuis git history |
 | `ambient.mp3` | Musique d'ambiance |
 | `docker-compose.yml` | Serveur nginx local pour les tests |
+
+### Architecture données (double source)
+
+```
+bookmarks.html  →  structure (catégories/liens)  →  parseBookmarkTree()
+bookmarks.csv   →  métadonnées (desc/tags/date)  →  loadMetadata()
+                          ↓ fusion par URL
+                    allBookmarks[].meta = { description, tags, date_added }
+```
+
+### Features UI
+
+| Feature | Déclencheur | localStorage |
+|---|---|---|
+| **Nouveautés** | Bouton header | `lastVisitDate` (timestamp du dernier passage) |
+| **Favoris** | Bouton header ★ | `favorites` (tableau d'URLs) |
+| **Tags** | Clic sur une pill tag | Filtre la recherche |
+| **Scroll audio/thème** | Persistance auto | `theme`, `audioEnabled`, `scrollPosition`, etc. |
+
+### bookmarks.csv — format
+
+```csv
+url,name,category,subcategory,description,tags,date_added
+https://example.com,Nom Outil,Catégorie,Sous-catégorie,Description courte en français,tag1|tag2|tag3,1767298944
+```
+
+- `tags` : séparés par `|`
+- `date_added` : timestamp Unix (rempli automatiquement par `scripts/migrate.py`)
+- `description` : à remplir manuellement, 1 phrase, cas d'usage principal
 
 ### Logique audio (localStorage)
 

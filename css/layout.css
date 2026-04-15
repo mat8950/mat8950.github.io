@@ -133,6 +133,12 @@ header h1::after {
     align-items: center;
 }
 
+/* ---- SEARCH WRAPPER ---- */
+.search-wrapper {
+    position: relative;
+    z-index: 300;
+}
+
 /* ---- SEARCH ---- */
 #search {
     padding: 0.5rem 1rem;

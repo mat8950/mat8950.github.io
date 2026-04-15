@@ -56,7 +56,16 @@
         <h1>Marque-pages</h1>
         <div class="header-controls">
             <label for="search" class="visually-hidden">Rechercher des marque-pages</label>
-            <input type="text" id="search" placeholder="Rechercher..." aria-label="Rechercher des marque-pages">
+            <div class="search-wrapper">
+                <input type="text" id="search" placeholder="Rechercher..." aria-label="Rechercher des marque-pages" autocomplete="off" aria-autocomplete="list" aria-controls="search-suggestions">
+                <div id="search-suggestions" class="search-suggestions hidden" role="listbox" aria-label="Suggestions de recherche"></div>
+            </div>
+            <button id="favorites-btn" class="header-btn" aria-label="Favoris">
+                ★ Favoris <span id="favorites-badge" class="badge hidden" aria-live="polite">0</span>
+            </button>
+            <button id="updates-btn" class="header-btn" aria-label="Dernières mises à jour">
+                Nouveautés <span id="updates-badge" class="badge hidden" aria-live="polite">0</span>
+            </button>
             <div class="theme-selector" id="theme-selector">
                 <button id="theme-selector-btn" aria-haspopup="listbox" aria-expanded="false" title="Sélectionner un thème">
                     <span class="btn-swatch"></span>
@@ -115,7 +124,29 @@
         <source src="ambient.mp3" type="audio/mpeg">
     </audio>
 
-    <script src="script.js"></script>
+    <!-- Panel Favoris -->
+    <div id="favorites-panel" class="panel hidden" role="dialog" aria-modal="true" aria-label="Favoris" aria-hidden="true">
+        <div class="panel-inner">
+            <div class="panel-header">
+                <h2>★ Favoris</h2>
+                <button class="panel-close" aria-label="Fermer">✕</button>
+            </div>
+            <div id="favorites-list" class="panel-content"></div>
+        </div>
+    </div>
+
+    <!-- Panel Nouveautés -->
+    <div id="updates-panel" class="panel hidden" role="dialog" aria-modal="true" aria-label="Dernières mises à jour" aria-hidden="true">
+        <div class="panel-inner">
+            <div class="panel-header">
+                <h2>Dernières mises à jour</h2>
+                <button class="panel-close" aria-label="Fermer">✕</button>
+            </div>
+            <div id="updates-list" class="panel-content"></div>
+        </div>
+    </div>
+
+<script src="script.js"></script>
 
     <script>
         // ===== WEBGL DETECTION & FALLBACK =====

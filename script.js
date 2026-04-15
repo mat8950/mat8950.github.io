@@ -5,6 +5,9 @@ let allBookmarks = [];
 let searchQuery = '';
 let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
 
+// ===== MÉTADONNÉES CSV =====
+let bookmarkMeta = new Map(); // url → { name, category, subcategory, description, tags, date_added }
+
 // ===== LAZY LOADING =====
 const BATCH_SIZE = 30;
 let displayedCount = 0;
@@ -37,6 +40,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     initKeyboardNavigation();
     initLazyLoading();
     await loadBookmarks();
+    initFavoritesPanel();
+    initUpdatesPanel();
     console.log('Rendering folder tree...');
     renderFolderTree();
     console.log('Showing initial folder...');
@@ -52,7 +57,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('App initialized!');
 });
 
-// Load and parse bookmarks.html
+// Load and parse bookmarks.html + bookmarks.csv
 async function loadBookmarks() {
     try {
         console.log('Loading bookmarks.html...');
@@ -72,10 +77,67 @@ async function loadBookmarks() {
             folders: bookmarkData.folders.length,
             bookmarks: allBookmarks.length
         });
+
+        await loadMetadata();
+        buildSuggestionPool();
     } catch (error) {
         console.error('Error loading bookmarks:', error);
         alert('Erreur lors du chargement des marque-pages: ' + error.message);
     }
+}
+
+// ─── Chargement métadonnées CSV ────────────────────────────────────────────
+async function loadMetadata() {
+    try {
+        const res = await fetch('bookmarks.csv');
+        if (!res.ok) return;
+        const text = await res.text();
+        const rows = parseCSV(text);
+        rows.forEach(row => {
+            if (row.url) bookmarkMeta.set(row.url, {
+                name:        row.name        || '',
+                category:    row.category    || '',
+                subcategory: row.subcategory || '',
+                description: row.description || '',
+                tags:        row.tags        ? row.tags.split('|').filter(Boolean) : [],
+                date_added:  row.date_added  ? parseInt(row.date_added) : 0,
+            });
+        });
+        console.log(`Metadata loaded: ${bookmarkMeta.size} entries`);
+    } catch (e) {
+        console.warn('Metadata CSV not available:', e);
+    }
+}
+
+function parseCSV(text) {
+    const lines = text.trim().split('\n');
+    if (lines.length < 2) return [];
+    const headers = lines[0].split(',').map(h => h.trim());
+    return lines.slice(1).map(line => {
+        const values = parseCSVLine(line);
+        const obj = {};
+        headers.forEach((h, i) => { obj[h] = (values[i] || '').trim(); });
+        return obj;
+    });
+}
+
+function parseCSVLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+            inQuotes = !inQuotes;
+        } else if (ch === ',' && !inQuotes) {
+            result.push(current);
+            current = '';
+        } else {
+            current += ch;
+        }
+    }
+    result.push(current);
+    return result;
 }
 
 // Parse the bookmark HTML structure - Simple approach
@@ -336,12 +398,16 @@ function displayBookmarks() {
         filtered = filtered.filter(b => !b.folder || b.folder === 'Root');
     }
 
-    // Filter by search query
+    // Filter by search query (title, URL, description, tags)
     if (searchQuery) {
-        filtered = filtered.filter(b =>
-            b.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            b.url.toLowerCase().includes(searchQuery.toLowerCase())
-        );
+        const q = searchQuery.toLowerCase();
+        filtered = filtered.filter(b => {
+            const meta = bookmarkMeta.get(b.url);
+            return b.title.toLowerCase().includes(q) ||
+                   b.url.toLowerCase().includes(q) ||
+                   (meta?.description || '').toLowerCase().includes(q) ||
+                   (meta?.tags || []).some(t => t.toLowerCase().includes(q));
+        });
     }
 
     // Afficher les favoris en haut sur la page d'accueil
@@ -543,6 +609,46 @@ function createBookmarkCard(bookmark) {
     info.appendChild(title);
     info.appendChild(url);
 
+    // Métadonnées enrichies depuis CSV
+    const meta = bookmarkMeta.get(bookmark.url);
+    if (meta) {
+        if (meta.description) {
+            const desc = document.createElement('div');
+            desc.className = 'bookmark-description';
+            desc.textContent = meta.description.length > 90
+                ? meta.description.slice(0, 87) + '…'
+                : meta.description;
+            info.appendChild(desc);
+        }
+
+        if (meta.tags && meta.tags.length > 0) {
+            const tagsRow = document.createElement('div');
+            tagsRow.className = 'bookmark-tags';
+            meta.tags.slice(0, 4).forEach(tag => {
+                const pill = document.createElement('span');
+                pill.className = 'tag-pill';
+                pill.textContent = tag;
+                pill.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const searchInput = document.getElementById('search');
+                    searchInput.value = tag;
+                    searchQuery = tag;
+                    displayBookmarks();
+                });
+                tagsRow.appendChild(pill);
+            });
+            info.appendChild(tagsRow);
+        }
+
+        if (meta.date_added > 0) {
+            const dateEl = document.createElement('span');
+            dateEl.className = 'bookmark-date';
+            dateEl.textContent = formatDateShort(meta.date_added);
+            dateEl.title = new Date(meta.date_added * 1000).toLocaleDateString('fr-FR');
+            info.appendChild(dateEl);
+        }
+    }
+
     // Bouton favori
     const favoriteBtn = document.createElement('button');
     favoriteBtn.className = 'favorite-btn';
@@ -690,6 +796,11 @@ function initSearch() {
     searchInput.addEventListener('input', (e) => {
         searchQuery = e.target.value.trim();
         displayBookmarks();
+        updateSuggestions(searchQuery);
+    });
+
+    searchInput.addEventListener('focus', () => {
+        if (searchInput.value.trim()) updateSuggestions(searchInput.value.trim());
     });
 
     // Raccourci "/" pour focus sur la recherche
@@ -699,6 +810,7 @@ function initSearch() {
             searchInput.focus();
         }
         if (e.key === 'Escape' && document.activeElement === searchInput) {
+            hideSuggestions();
             searchInput.blur();
             searchInput.value = '';
             searchQuery = '';
@@ -706,6 +818,149 @@ function initSearch() {
         }
     });
 }
+
+// ─── Suggestions de recherche ─────────────────────────────────────────────
+
+// Pool de suggestions : tags + catégories + noms — construit après loadMetadata()
+let suggestionPool = [];
+
+function buildSuggestionPool() {
+    const tagSet  = new Set();
+    const catSet  = new Set();
+    const nameSet = new Set();
+
+    bookmarkMeta.forEach(meta => {
+        (meta.tags || []).forEach(t => t && tagSet.add(t.toLowerCase()));
+    });
+
+    allBookmarks.forEach(b => {
+        if (b.folder) b.folder.split(' > ').forEach(part => catSet.add(part.trim()));
+        if (b.title)  nameSet.add(b.title);
+    });
+
+    // tags en premier (plus utiles), puis catégories, puis noms
+    suggestionPool = [
+        ...Array.from(tagSet).map(t  => ({ label: t,    type: 'tag'  })),
+        ...Array.from(catSet).map(c  => ({ label: c,    type: 'cat'  })),
+        ...Array.from(nameSet).map(n => ({ label: n,    type: 'name' })),
+    ];
+}
+
+function getSuggestions(query) {
+    if (!query || query.length < 2) return [];
+    const q = query.toLowerCase();
+    const results = suggestionPool.filter(s => s.label.toLowerCase().includes(q));
+    // Trier : commence par la query en premier, puis contient
+    results.sort((a, b) => {
+        const aStarts = a.label.toLowerCase().startsWith(q);
+        const bStarts = b.label.toLowerCase().startsWith(q);
+        if (aStarts && !bStarts) return -1;
+        if (!aStarts && bStarts) return 1;
+        return a.label.localeCompare(b.label);
+    });
+    return results.slice(0, 8);
+}
+
+let selectedSuggestionIndex = -1;
+
+function updateSuggestions(query) {
+    const box = document.getElementById('search-suggestions');
+    if (!box) return;
+
+    const suggestions = getSuggestions(query);
+    if (!suggestions.length) { hideSuggestions(); return; }
+
+    selectedSuggestionIndex = -1;
+    box.innerHTML = '';
+
+    suggestions.forEach((s, i) => {
+        const item = document.createElement('div');
+        item.className = 'suggestion-item';
+        item.setAttribute('role', 'option');
+        item.setAttribute('data-index', i);
+
+        const label = document.createElement('span');
+        label.className = 'suggestion-label';
+        // Mettre en gras la partie qui correspond
+        const q = query.toLowerCase();
+        const idx = s.label.toLowerCase().indexOf(q);
+        if (idx >= 0) {
+            label.innerHTML = escapeHtml(s.label.slice(0, idx))
+                + `<strong>${escapeHtml(s.label.slice(idx, idx + query.length))}</strong>`
+                + escapeHtml(s.label.slice(idx + query.length));
+        } else {
+            label.textContent = s.label;
+        }
+
+        const type = document.createElement('span');
+        type.className = `suggestion-type suggestion-type--${s.type}`;
+        type.textContent = s.type === 'tag' ? '#' : s.type === 'cat' ? '/' : '→';
+
+        item.appendChild(type);
+        item.appendChild(label);
+
+        item.addEventListener('mousedown', (e) => {
+            e.preventDefault(); // Éviter le blur du input
+            applySuggestion(s.label);
+        });
+
+        box.appendChild(item);
+    });
+
+    box.classList.remove('hidden');
+}
+
+function applySuggestion(value) {
+    const input = document.getElementById('search');
+    input.value = value;
+    searchQuery = value;
+    displayBookmarks();
+    hideSuggestions();
+    input.focus();
+}
+
+function hideSuggestions() {
+    const box = document.getElementById('search-suggestions');
+    if (box) { box.classList.add('hidden'); box.innerHTML = ''; }
+    selectedSuggestionIndex = -1;
+}
+
+function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Navigation clavier dans les suggestions
+document.addEventListener('keydown', (e) => {
+    const box  = document.getElementById('search-suggestions');
+    const input = document.getElementById('search');
+    if (!box || box.classList.contains('hidden')) return;
+    if (document.activeElement !== input) return;
+
+    const items = box.querySelectorAll('.suggestion-item');
+    if (!items.length) return;
+
+    if (e.key === 'ArrowDown') {
+        e.stopPropagation();
+        e.preventDefault();
+        selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1, items.length - 1);
+        items.forEach((it, i) => it.classList.toggle('selected', i === selectedSuggestionIndex));
+    } else if (e.key === 'ArrowUp') {
+        e.stopPropagation();
+        e.preventDefault();
+        selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, -1);
+        items.forEach((it, i) => it.classList.toggle('selected', i === selectedSuggestionIndex));
+    } else if (e.key === 'Enter' && selectedSuggestionIndex >= 0) {
+        e.preventDefault();
+        applySuggestion(items[selectedSuggestionIndex].querySelector('.suggestion-label').textContent);
+    } else if (e.key === 'Escape') {
+        hideSuggestions();
+    }
+});
+
+// Fermer au clic extérieur
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.search-wrapper')) hideSuggestions();
+});
 
 // ===== NAVIGATION CLAVIER =====
 let selectedFolderIndex = -1;
@@ -866,3 +1121,228 @@ showFolder = function(folderPath) {
     }
     originalShowFolder(folderPath);
 };
+
+// ─── Feature FAVORIS ──────────────────────────────────────────────────────
+function initFavoritesPanel() {
+    const btn   = document.getElementById('favorites-btn');
+    const badge = document.getElementById('favorites-badge');
+    const panel = document.getElementById('favorites-panel');
+    const list  = document.getElementById('favorites-list');
+    const close = panel?.querySelector('.panel-close');
+
+    if (!btn || !panel) return;
+
+    function refreshBadge() {
+        const count = favorites.length;
+        badge.textContent = count;
+        badge.classList.toggle('hidden', count === 0);
+    }
+
+    function renderFavorites() {
+        list.innerHTML = '';
+        const favBMs = getFavoriteBookmarks();
+
+        if (favBMs.length === 0) {
+            list.innerHTML = '<p class="panel-empty">Aucun favori pour l\'instant. Cliquez sur ☆ sur un marque-page pour l\'ajouter.</p>';
+            return;
+        }
+
+        favBMs.forEach(b => {
+            const meta = bookmarkMeta.get(b.url);
+            const entry = document.createElement('div');
+            entry.className = 'timeline-entry fav-entry';
+
+            const rootCat = (b.folder || '').split(' > ')[0];
+            let hostname = '';
+            try { hostname = new URL(b.url).hostname; } catch {}
+
+            const cat = document.createElement('span');
+            cat.className = 'tl-cat';
+            cat.textContent = rootCat;
+
+            const descText = meta?.description
+                ? (meta.description.length > 70 ? meta.description.slice(0, 67) + '…' : meta.description)
+                : '';
+
+            const name = document.createElement('span');
+            name.className = 'tl-name';
+            name.innerHTML = `<a href="${b.url}" target="_blank" rel="noopener">${b.title}</a>`
+                + `<span class="tl-url">${hostname}</span>`
+                + (descText ? `<span class="tl-desc">${descText}</span>` : '');
+
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'fav-remove-btn';
+            removeBtn.textContent = '★';
+            removeBtn.title = 'Retirer des favoris';
+            removeBtn.addEventListener('click', () => {
+                toggleFavorite(b.url);
+                refreshBadge();
+                renderFavorites();
+                if (currentFolder === null) displayBookmarks();
+            });
+
+            entry.appendChild(cat);
+            entry.appendChild(name);
+            entry.appendChild(removeBtn);
+            list.appendChild(entry);
+        });
+    }
+
+    refreshBadge();
+
+    btn.addEventListener('click', () => {
+        renderFavorites();
+        panel.classList.remove('hidden');
+        panel.setAttribute('aria-hidden', 'false');
+    });
+
+    close?.addEventListener('click', closeFavorites);
+    panel.addEventListener('click', (e) => { if (e.target === panel) closeFavorites(); });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !panel.classList.contains('hidden')) closeFavorites();
+    });
+
+    function closeFavorites() {
+        panel.classList.add('hidden');
+        panel.setAttribute('aria-hidden', 'true');
+    }
+
+    // Mettre à jour le badge quand toggleFavorite est appelé
+    const _origToggle = toggleFavorite;
+    toggleFavorite = function(url) {
+        _origToggle(url);
+        refreshBadge();
+    };
+}
+
+// ─── Utilitaires date ─────────────────────────────────────────────────────
+function formatDateShort(timestamp) {
+    const d = new Date(timestamp * 1000);
+    return d.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
+}
+
+function formatDateFull(timestamp) {
+    const d = new Date(timestamp * 1000);
+    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function groupByMonth(bookmarks) {
+    const groups = new Map();
+    bookmarks.forEach(b => {
+        const meta = bookmarkMeta.get(b.url);
+        const ts = meta?.date_added || 0;
+        const d = new Date(ts * 1000);
+        const key = ts > 0
+            ? d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+            : 'Date inconnue';
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(b);
+    });
+    return groups;
+}
+
+// ─── Feature NOUVEAUTÉS ────────────────────────────────────────────────────
+function initUpdatesPanel() {
+    const btn    = document.getElementById('updates-btn');
+    const badge  = document.getElementById('updates-badge');
+    const panel  = document.getElementById('updates-panel');
+    const list   = document.getElementById('updates-list');
+    const close  = panel?.querySelector('.panel-close');
+
+    if (!btn || !panel) return;
+
+    // Calculer le max date_added pour la prochaine visite
+    const maxDateAdded = Math.max(0, ...Array.from(bookmarkMeta.values()).map(m => m.date_added || 0));
+
+    // Récupérer la date de dernière visite de l'onglet Nouveautés
+    const lastVisitDate = parseInt(localStorage.getItem('lastVisitDate') || '0');
+
+    // Bookmarks nouveaux depuis la dernière visite
+    function getNewBookmarks() {
+        return allBookmarks
+            .filter(b => {
+                const meta = bookmarkMeta.get(b.url);
+                return meta?.date_added > lastVisitDate;
+            })
+            .sort((a, b) => {
+                const da = bookmarkMeta.get(a.url)?.date_added || 0;
+                const db = bookmarkMeta.get(b.url)?.date_added || 0;
+                return db - da;
+            });
+    }
+
+    // Mettre à jour le badge
+    function refreshBadge() {
+        const count = getNewBookmarks().length;
+        if (count > 0) {
+            badge.textContent = count;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+
+    // Remplir le panel
+    function renderUpdates() {
+        list.innerHTML = '';
+        const newBMs = getNewBookmarks();
+
+        if (newBMs.length === 0) {
+            list.innerHTML = '<p class="panel-empty">Aucun ajout depuis votre dernière visite.</p>';
+            return;
+        }
+
+        const groups = groupByMonth(newBMs);
+        groups.forEach((items, monthLabel) => {
+            const group = document.createElement('div');
+            group.className = 'timeline-group';
+
+            const header = document.createElement('div');
+            header.className = 'timeline-group-header';
+            header.textContent = `${monthLabel} — ${items.length} ajout${items.length > 1 ? 's' : ''}`;
+            group.appendChild(header);
+
+            items.forEach(b => {
+                const meta = bookmarkMeta.get(b.url);
+                const entry = document.createElement('div');
+                entry.className = 'timeline-entry';
+                const rootCat = (b.folder || '').split(' > ')[0];
+                let hostname = '';
+                try { hostname = new URL(b.url).hostname; } catch {}
+                entry.innerHTML = `
+                    <span class="tl-cat">${rootCat}</span>
+                    <span class="tl-name"><a href="${b.url}" target="_blank" rel="noopener">${b.title}</a><span class="tl-url">${hostname}</span></span>
+                `;
+                group.appendChild(entry);
+            });
+
+            list.appendChild(group);
+        });
+    }
+
+    refreshBadge();
+
+    btn.addEventListener('click', () => {
+        renderUpdates();
+        panel.classList.remove('hidden');
+        panel.setAttribute('aria-hidden', 'false');
+        // Sauvegarder la date de visite (max date existante)
+        if (maxDateAdded > 0) {
+            localStorage.setItem('lastVisitDate', maxDateAdded.toString());
+        }
+        // Cacher le badge
+        badge.classList.add('hidden');
+    });
+
+    close?.addEventListener('click', closeUpdates);
+    panel.addEventListener('click', (e) => { if (e.target === panel) closeUpdates(); });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !panel.classList.contains('hidden')) closeUpdates();
+    });
+
+    function closeUpdates() {
+        panel.classList.add('hidden');
+        panel.setAttribute('aria-hidden', 'true');
+    }
+}
+
