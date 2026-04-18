@@ -31,6 +31,8 @@
     --border-bright: rgba(255, 255, 255, 0.25);
     --border-strong: rgba(255, 255, 255, 0.40);
     --glow-white:    0 0 20px rgba(255, 255, 255, 0.10);
+    --shadow-card:   0 2px 8px rgba(0, 0, 0, 0.6);
+    --glow-accent:   0 0 12px rgba(255, 255, 255, 0.08);
 
     /* Layout */
     --sidebar-width: clamp(220px, 20vw, 500px);
@@ -43,11 +45,11 @@
 /* ---- LIGHT ---- */
 body[data-theme="light"],
 body.light-mode:not([data-theme]) {
-    --bg-primary:   #ffffff;
-    --bg-secondary: rgba(255, 255, 255, 0.95);
-    --bg-tertiary:  rgba(250, 250, 250, 0.95);
-    --bg-terminal:  #ffffff;
-    --bg-glass:     rgba(255, 255, 255, 0.90);
+    --bg-primary:   #fafaf8;
+    --bg-secondary: rgba(250, 250, 248, 0.95);
+    --bg-tertiary:  rgba(245, 245, 242, 0.95);
+    --bg-terminal:  #fafaf8;
+    --bg-glass:     rgba(250, 250, 248, 0.92);
     --text-primary:   #000000;
     --text-secondary: #222222;
     --text-dim:       #555555;
@@ -132,52 +134,67 @@ body[data-theme="apple-dark"] {
 
 /* ---- APPLE LIGHT ---- */
 body[data-theme="apple-light"] {
-    /* Page background — ivoire Apple */
-    --bg-primary:   #f2f2f7;
-    --bg-terminal:  #f2f2f7;
+    /* Page background — lavande froide (rend le verre visible) */
+    --bg-primary:   #e8eaf2;
+    --bg-terminal:  #e8eaf2;
 
-    /* Liquid Glass surfaces — vibrancy light material */
-    --glass-thin:     rgba(255, 255, 255, 0.55);
-    --glass-regular:  rgba(255, 255, 255, 0.72);
-    --glass-thick:    rgba(255, 255, 255, 0.82);
-    --glass-ultra:    rgba(255, 255, 255, 0.90);
-    --glass-sidebar:  rgba(242, 242, 247, 0.78);
-    --glass-header:   rgba(242, 242, 247, 0.85);
-    --glass-card:     rgba(255, 255, 255, 0.65);
+    /* Clear Glass surfaces — teintes chromatiques distinctes par épaisseur */
+    /* thin  : légèrement bleuté (lumière directe, réfraction froide) */
+    --glass-thin:     rgba(240, 244, 255, 0.42);
+    /* regular : blanc pur neutre */
+    --glass-regular:  rgba(255, 255, 255, 0.66);
+    /* thick : légèrement ivoire/chaud (épaisseur = absorption chaleur) */
+    --glass-thick:    rgba(255, 253, 248, 0.80);
+    /* ultra : blanc très opaque */
+    --glass-ultra:    rgba(255, 255, 255, 0.93);
+    /* sidebar : teinte lavande-bleutée (matériau sidebar macOS) */
+    --glass-sidebar:  rgba(232, 236, 250, 0.74);
+    /* header : blanc froid légèrement bleuté */
+    --glass-header:   rgba(244, 246, 255, 0.86);
+    /* card : blanc légèrement chaud */
+    --glass-card:     rgba(255, 254, 250, 0.60);
 
     /* Rétrocompat */
-    --bg-secondary: rgba(242, 242, 247, 0.78);
-    --bg-tertiary:  rgba(255, 255, 255, 0.82);
-    --bg-glass:     rgba(242, 242, 247, 0.78);
+    --bg-secondary: rgba(232, 236, 250, 0.76);
+    --bg-tertiary:  rgba(248, 249, 255, 0.84);
+    --bg-glass:     rgba(232, 236, 250, 0.74);
 
-    /* Texte — SF Pro opacités */
-    --text-primary:   rgba(0, 0, 0, 0.88);
-    --text-secondary: rgba(0, 0, 0, 0.65);
-    --text-dim:       rgba(0, 0, 0, 0.45);
-    --text-highlight: #000000;
-    --text-muted:     rgba(0, 0, 0, 0.32);
+    /* Texte — léger tint bleu-noir (pas pur black) */
+    --text-primary:   rgba(10, 10, 30, 0.87);
+    --text-secondary: rgba(10, 15, 40, 0.62);
+    --text-dim:       rgba(20, 20, 60, 0.42);
+    --text-highlight: #05050f;
+    --text-muted:     rgba(30, 30, 80, 0.30);
 
-    /* Accent — Blue Apple iOS */
+    /* Accent — Blue Apple */
     --accent:           #007aff;
     --accent-secondary: #0071e3;
-    --accent-dim:       rgba(0, 122, 255, 0.12);
+    --accent-dim:       rgba(0, 122, 255, 0.13);
 
-    /* Bordures verre */
-    --border-color:   rgba(0, 0, 0, 0.06);
-    --border-bright:  rgba(0, 0, 0, 0.10);
-    --border-strong:  rgba(0, 0, 0, 0.18);
-    --border-glass:   rgba(255, 255, 255, 0.80); /* bord verre haut */
-    --border-inner:   rgba(255, 255, 255, 0.90); /* highlight interne */
+    /* Bordures — tint bleu froid pour renforcer l'effet glass */
+    --border-color:   rgba(0, 20, 100, 0.07);
+    --border-bright:  rgba(0, 20, 100, 0.12);
+    --border-strong:  rgba(0, 20, 100, 0.22);
+    --border-glass:   rgba(255, 255, 255, 0.90);  /* specular haut */
+    --border-inner:   rgba(255, 255, 255, 0.98);  /* inner highlight */
+    --border-bottom:  rgba(0, 10, 80, 0.09);      /* ombre bord bas */
 
-    /* Shadows */
-    --shadow-glass: 0 8px 28px rgba(0, 0, 0, 0.10), 0 2px 6px rgba(0, 0, 0, 0.06);
-    --shadow-card:  0 2px 10px rgba(0, 0, 0, 0.08);
-    --glow-white:   0 0 30px rgba(0, 122, 255, 0.06);
+    /* Shadows multi-couches — profondeur verre réelle */
+    --shadow-glass:
+        inset 0 1px 0 rgba(255, 255, 255, 0.88),
+        0 8px 32px rgba(0, 15, 80, 0.13),
+        0 2px 6px rgba(0, 0, 40, 0.08),
+        0 1px 0 rgba(0, 0, 60, 0.04);
+    --shadow-card:
+        inset 0 1px 0 rgba(255, 255, 255, 0.92),
+        0 4px 18px rgba(0, 15, 80, 0.10),
+        0 1px 3px rgba(0, 0, 0, 0.07);
+    --glow-white:   0 0 30px rgba(0, 100, 255, 0.07);
 
-    /* Blur Apple vibrancy */
-    --blur-thin:    saturate(180%) blur(14px);
-    --blur-regular: saturate(200%) blur(24px);
-    --blur-thick:   saturate(220%) blur(32px);
+    /* Vibrancy — saturation plus élevée pour vraie transparence matériau */
+    --blur-thin:    saturate(200%) blur(12px);
+    --blur-regular: saturate(220%) blur(22px);
+    --blur-thick:   saturate(240%) blur(32px);
 
     /* Border radius */
     --radius-xl:  22px;
@@ -214,6 +231,12 @@ body[data-theme="nord"] {
     --border-bright: rgba(236, 239, 244, 0.14);
     --border-strong: rgba(136, 192, 208, 0.40);
     --glow-white:    0 0 20px rgba(136, 192, 208, 0.10);
+    --shadow-card:   0 4px 12px rgba(0, 0, 0, 0.4);
+    /* Full Nord palette extras */
+    --accent-green:  #a3be8c;
+    --accent-red:    #bf616a;
+    --accent-blue:   #5e81ac;
+    --accent-teal:   #8fbcbb;
     /* Police — IBM Plex Mono (propre, nordique) */
     --font-body: 'IBM Plex Mono', 'Courier New', monospace;
     --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
@@ -238,7 +261,73 @@ body[data-theme="dracula"] {
     --border-bright: rgba(248, 248, 242, 0.14);
     --border-strong: rgba(255, 121, 198, 0.40);
     --glow-white:    0 0 20px rgba(189, 147, 249, 0.15);
+    --shadow-card:   0 4px 12px rgba(0, 0, 0, 0.45);
+    /* Full Dracula palette extras */
+    --accent-green:  #50fa7b;
+    --accent-cyan:   #8be9fd;
+    --accent-orange: #ffb86c;
+    --accent-yellow: #f1fa8c;
     /* Police — JetBrains Mono avec italique (code editor) */
     --font-body: 'JetBrains Mono', 'Fira Code', monospace;
     --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* ---- CATPPUCCIN MOCHA ---- */
+body[data-theme="catppuccin"] {
+    --bg-primary:        #1e1e2e;
+    --bg-secondary:      rgba(30, 30, 46, 0.95);
+    --bg-tertiary:       rgba(49, 50, 68, 0.95);
+    --bg-terminal:       #1e1e2e;
+    --bg-glass:          rgba(30, 30, 46, 0.85);
+    --text-primary:      #cdd6f4;
+    --text-secondary:    #bac2de;
+    --text-dim:          #a6adc8;
+    --text-highlight:    #cdd6f4;
+    --text-muted:        #585b70;
+    --accent:            #cba6f7;
+    --accent-secondary:  #89b4fa;
+    --accent-dim:        rgba(203, 166, 247, 0.15);
+    --border-color:      rgba(205, 214, 244, 0.08);
+    --border-bright:     rgba(205, 214, 244, 0.14);
+    --border-strong:     rgba(203, 166, 247, 0.40);
+    --glow-white:        0 0 20px rgba(203, 166, 247, 0.12);
+    --shadow-card:       0 4px 12px rgba(0, 0, 0, 0.4);
+    /* Catppuccin extras */
+    --accent-green:  #a6e3a1;
+    --accent-red:    #f38ba8;
+    --accent-teal:   #94e2d5;
+    --accent-yellow: #f9e2af;
+    /* Police */
+    --font-body: 'JetBrains Mono', 'Fira Code', monospace;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* ---- GRUVBOX DARK ---- */
+body[data-theme="gruvbox"] {
+    --bg-primary:        #282828;
+    --bg-secondary:      rgba(40, 40, 40, 0.95);
+    --bg-tertiary:       rgba(60, 56, 54, 0.95);
+    --bg-terminal:       #282828;
+    --bg-glass:          rgba(40, 40, 40, 0.85);
+    --text-primary:      #ebdbb2;
+    --text-secondary:    #d5c4a1;
+    --text-dim:          #a89984;
+    --text-highlight:    #ebdbb2;
+    --text-muted:        #665c54;
+    --accent:            #fabd2f;
+    --accent-secondary:  #fe8019;
+    --accent-dim:        rgba(250, 189, 47, 0.15);
+    --border-color:      rgba(235, 219, 178, 0.08);
+    --border-bright:     rgba(235, 219, 178, 0.14);
+    --border-strong:     rgba(250, 189, 47, 0.40);
+    --glow-white:        0 0 20px rgba(250, 189, 47, 0.10);
+    --shadow-card:       0 4px 12px rgba(0, 0, 0, 0.5);
+    /* Gruvbox extras */
+    --accent-green:  #b8bb26;
+    --accent-red:    #fb4934;
+    --accent-teal:   #8ec07c;
+    --accent-blue:   #83a598;
+    /* Police — IBM Plex Mono (rétro chaleureux) */
+    --font-body: 'IBM Plex Mono', 'Courier New', monospace;
+    --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
 }

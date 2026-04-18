@@ -1,1 +1,16 @@
-
+https://openrefine.org/
+https://www.knime.com/
+https://pageindex.ai/
+https://github.com/C4illin/ConvertX
+https://github.com/skillhub-club/skillhub-desktop
+https://github.com/siyuan-note/siyuan
+https://github.com/groundwater/GhostVM
+https://github.com/AnmolSaini16/mapcn
+https://github.com/twentyhq/twenty
+https://github.com/momenbasel/PureMac
+https://github.com/Arindam200/awesome-ai-apps
+https://github.com/longbridge/gpui-component
+https://github.com/NexaAI/nexa-sdk
+https://github.com/breaking-brake/cc-wf-studio
+https://github.com/ReScienceLab/opc-skills
+https://github.com/nextlevelbuilder/ui-ux-pro-max-skill

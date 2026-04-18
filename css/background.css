@@ -171,30 +171,49 @@ body[data-theme="apple-dark"] #css-fallback-bg {
         #0a0a0f;
 }
 
-/* ===== APPLE LIGHT — fond ivoire avec orbes pastel ===== */
+/* ===== APPLE LIGHT — fond clear glass chromatique ===== */
 body[data-theme="apple-light"] {
     background:
-        radial-gradient(ellipse 70% 50% at 15% 15%,  rgba(0, 122, 255, 0.07) 0%, transparent 55%),
-        radial-gradient(ellipse 55% 40% at 85% 75%,  rgba(175, 82, 222, 0.05) 0%, transparent 50%),
-        radial-gradient(ellipse 100% 80% at 50% 50%, rgba(255, 255, 255, 0.90) 0%, transparent 100%),
-        #f2f2f7;
+        radial-gradient(ellipse 65% 55% at 8%   5%,  rgba(140, 190, 255, 0.45) 0%, transparent 58%),
+        radial-gradient(ellipse 55% 45% at 92%  90%,  rgba(255, 195, 160, 0.32) 0%, transparent 52%),
+        radial-gradient(ellipse 48% 38% at 90%   8%,  rgba(185, 165, 255, 0.30) 0%, transparent 50%),
+        radial-gradient(ellipse 40% 30% at 10%  85%,  rgba(130, 220, 200, 0.20) 0%, transparent 45%),
+        #e8eaf2;
 }
 
 body[data-theme="apple-light"] #bg-canvas {
-    opacity: 0;  /* canvas masqué, fond CSS suffit */
+    opacity: 0;
+}
+
+/* Annuler le vignette sombre sur apple-light */
+body[data-theme="apple-light"] #css-fallback-bg::after {
+    background: none;
 }
 
 body[data-theme="apple-light"] #css-fallback-bg {
     background:
-        radial-gradient(ellipse 70% 50% at 15% 15%,  rgba(0, 122, 255, 0.08) 0%, transparent 55%),
-        radial-gradient(ellipse 55% 40% at 85% 75%,  rgba(175, 82, 222, 0.06) 0%, transparent 50%),
-        #f2f2f7;
-    display: block !important;  /* toujours affiché pour apple-light */
+        radial-gradient(ellipse 65% 55% at 8%   5%,  rgba(140, 190, 255, 0.45) 0%, transparent 58%),
+        radial-gradient(ellipse 55% 45% at 92%  90%,  rgba(255, 195, 160, 0.32) 0%, transparent 52%),
+        radial-gradient(ellipse 48% 38% at 90%   8%,  rgba(185, 165, 255, 0.30) 0%, transparent 50%),
+        radial-gradient(ellipse 40% 30% at 10%  85%,  rgba(130, 220, 200, 0.20) 0%, transparent 45%),
+        #e8eaf2;
+    display: block !important;
 }
 
-/* Nord — canvas atténué sur fond coloré */
-body[data-theme="nord"] #bg-canvas { opacity: 0.4; }
-body[data-theme="nord"] #css-fallback-bg { background: #2e3440; }
+/* Désactiver grille et particules sur apple-light */
+body[data-theme="apple-light"] .grid-container { display: none; }
+body[data-theme="apple-light"] .floating-particles { display: none; }
+body[data-theme="apple-light"] .vertical-lines { display: none; }
+
+/* Nord — canvas atténué, fond aurora subtil */
+body[data-theme="nord"] #bg-canvas { opacity: 0.35; }
+body[data-theme="nord"] #css-fallback-bg {
+    background:
+        radial-gradient(ellipse at 20% 20%, rgba(94, 129, 172, 0.20) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 80%, rgba(136, 192, 208, 0.14) 0%, transparent 60%),
+        radial-gradient(ellipse at 50% 50%, rgba(46, 52, 64, 1) 0%, transparent 100%),
+        #2e3440;
+}
 body[data-theme="nord"] .grid-lines {
     background-image:
         linear-gradient(to right,  rgba(136,192,208,0.15) 1px, transparent 1px),
@@ -205,9 +224,14 @@ body[data-theme="nord"] .v-line {
     background: linear-gradient(to top, transparent, rgba(136,192,208,0.4), transparent) !important;
 }
 
-/* Dracula — canvas atténué sur fond violet */
-body[data-theme="dracula"] #bg-canvas { opacity: 0.35; }
-body[data-theme="dracula"] #css-fallback-bg { background: #282a36; }
+/* Dracula — canvas atténué, fond violet profond */
+body[data-theme="dracula"] #bg-canvas { opacity: 0.30; }
+body[data-theme="dracula"] #css-fallback-bg {
+    background:
+        radial-gradient(ellipse at 30% 20%, rgba(189, 147, 249, 0.14) 0%, transparent 55%),
+        radial-gradient(ellipse at 75% 80%, rgba(255, 121, 198, 0.10) 0%, transparent 55%),
+        #282a36;
+}
 body[data-theme="dracula"] .grid-lines {
     background-image:
         linear-gradient(to right,  rgba(255,121,198,0.12) 1px, transparent 1px),
@@ -216,4 +240,40 @@ body[data-theme="dracula"] .grid-lines {
 body[data-theme="dracula"] .particle { background: #ff79c6 !important; }
 body[data-theme="dracula"] .v-line {
     background: linear-gradient(to top, transparent, rgba(189,147,249,0.4), transparent) !important;
+}
+
+/* ---- CATPPUCCIN MOCHA ---- */
+body[data-theme="catppuccin"] #bg-canvas { opacity: 0.28; }
+body[data-theme="catppuccin"] #css-fallback-bg {
+    background:
+        radial-gradient(ellipse at 30% 25%, rgba(203, 166, 247, 0.12) 0%, transparent 55%),
+        radial-gradient(ellipse at 70% 75%, rgba(137, 180, 250, 0.09) 0%, transparent 55%),
+        #1e1e2e;
+}
+body[data-theme="catppuccin"] .grid-lines {
+    background-image:
+        linear-gradient(to right,  rgba(203, 166, 247, 0.09) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(203, 166, 247, 0.09) 1px, transparent 1px);
+}
+body[data-theme="catppuccin"] .particle { background: #cba6f7 !important; }
+body[data-theme="catppuccin"] .v-line {
+    background: linear-gradient(to top, transparent, rgba(137, 180, 250, 0.35), transparent) !important;
+}
+
+/* ---- GRUVBOX DARK ---- */
+body[data-theme="gruvbox"] #bg-canvas { opacity: 0.28; }
+body[data-theme="gruvbox"] #css-fallback-bg {
+    background:
+        radial-gradient(ellipse at 20% 75%, rgba(254, 128, 25, 0.12) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(250, 189, 47, 0.09) 0%, transparent 50%),
+        #282828;
+}
+body[data-theme="gruvbox"] .grid-lines {
+    background-image:
+        linear-gradient(to right,  rgba(250, 189, 47, 0.10) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(250, 189, 47, 0.10) 1px, transparent 1px);
+}
+body[data-theme="gruvbox"] .particle { background: #fabd2f !important; }
+body[data-theme="gruvbox"] .v-line {
+    background: linear-gradient(to top, transparent, rgba(254, 128, 25, 0.40), transparent) !important;
 }

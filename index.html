@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mes Marque-pages</title>
+    <meta name="description" content="Gestionnaire de marque-pages technique">
+    <meta name="theme-color" content="#0a0a0f">
+    <link rel="manifest" href="/manifest.json">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -53,7 +56,7 @@
     <canvas id="audio-visualizer"></canvas>
 
     <header role="banner">
-        <h1>Marque-pages</h1>
+        <h1>Marque-pages <span id="bookmark-total" class="bookmark-total" aria-live="polite"></span></h1>
         <div class="header-controls">
             <label for="search" class="visually-hidden">Rechercher des marque-pages</label>
             <div class="search-wrapper">
@@ -66,6 +69,7 @@
             <button id="updates-btn" class="header-btn" aria-label="Dernières mises à jour">
                 Nouveautés <span id="updates-badge" class="badge hidden" aria-live="polite">0</span>
             </button>
+            <button id="stats-btn" class="header-btn" aria-label="Statistiques">~ Stats</button>
             <div class="theme-selector" id="theme-selector">
                 <button id="theme-selector-btn" aria-haspopup="listbox" aria-expanded="false" title="Sélectionner un thème">
                     <span class="btn-swatch"></span>
@@ -90,19 +94,66 @@
                     <button class="theme-option" data-theme="dracula" role="option" aria-selected="false">
                         <span class="theme-swatch"></span>Dracula
                     </button>
+                    <button class="theme-option" data-theme="catppuccin" role="option" aria-selected="false">
+                        <span class="theme-swatch"></span>Catppuccin
+                    </button>
+                    <button class="theme-option" data-theme="gruvbox" role="option" aria-selected="false">
+                        <span class="theme-swatch"></span>Gruvbox
+                    </button>
                 </div>
             </div>
         </div>
     </header>
 
+    <!-- Overlay raccourcis clavier -->
+    <div id="shortcuts-overlay" class="shortcuts-overlay hidden" role="dialog" aria-modal="true" aria-label="Raccourcis clavier">
+        <div class="shortcuts-panel">
+            <div class="shortcuts-header">
+                <span>Raccourcis clavier</span>
+                <button id="shortcuts-close" aria-label="Fermer">✕</button>
+            </div>
+            <div class="shortcuts-grid">
+                <div class="shortcut-row"><kbd>↑</kbd><kbd>↓</kbd><span>Naviguer dossiers / bookmarks</span></div>
+                <div class="shortcut-row"><kbd>→</kbd><span>Aller aux bookmarks</span></div>
+                <div class="shortcut-row"><kbd>←</kbd><span>Revenir aux dossiers</span></div>
+                <div class="shortcut-row"><kbd>Enter</kbd><span>Ouvrir</span></div>
+                <div class="shortcut-row"><kbd>C</kbd><span>Copier l'URL du bookmark sélectionné</span></div>
+                <div class="shortcut-row"><kbd>/</kbd><span>Focus recherche</span></div>
+                <div class="shortcut-row"><kbd>Esc</kbd><span>Désélectionner / quitter</span></div>
+                <div class="shortcut-row"><kbd>Space</kbd><span>Play / Pause musique</span></div>
+                <div class="shortcut-row"><kbd>M</kbd><span>Mute / Unmute</span></div>
+                <div class="shortcut-row"><kbd>F</kbd><span>Masquer / afficher la sidebar</span></div>
+                <div class="shortcut-row"><kbd>?</kbd><span>Afficher cette aide</span></div>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <aside class="sidebar" role="navigation" aria-label="Navigation des dossiers">
-            <h2 id="folders-heading">Dossiers</h2>
+            <h2 id="folders-heading">Dossiers <button id="collapse-all-btn" title="Tout replier" aria-label="Tout replier">↑</button></h2>
             <div id="folder-tree" role="tree" aria-labelledby="folders-heading"></div>
+            <label id="import-bookmarks-zone" class="import-drop-zone" title="Importer un export Chrome/Firefox (.html)">
+                ↑ Import .html
+                <input type="file" id="import-bookmarks-input" accept=".html,.htm" style="display:none">
+            </label>
         </aside>
 
         <main class="content" role="main" aria-label="Liste des marque-pages">
             <nav id="breadcrumb" aria-label="Fil d'Ariane"></nav>
+            <div id="sort-bar" class="sort-bar" aria-label="Trier les résultats">
+                <span class="sort-label">Tri :</span>
+                <button class="sort-btn active" data-sort="default">Par défaut</button>
+                <button class="sort-btn" data-sort="alpha">A → Z</button>
+                <button class="sort-btn" data-sort="date">Date</button>
+                <button class="sort-btn" data-sort="domain">Domaine</button>
+                <select id="date-filter" class="sort-btn date-filter-select" aria-label="Filtrer par date">
+                    <option value="">Toutes dates</option>
+                    <option value="30">30 jours</option>
+                    <option value="90">90 jours</option>
+                    <option value="365">1 an</option>
+                </select>
+                <button id="compact-btn" class="sort-btn sort-btn-right" title="Mode compact" aria-label="Mode compact">⊟</button>
+            </div>
             <div id="bookmarks-grid" role="list" aria-label="Marque-pages"></div>
             <div id="empty-state" style="display: none;" role="status" aria-live="polite">
                 <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
@@ -129,9 +180,24 @@
         <div class="panel-inner">
             <div class="panel-header">
                 <h2>★ Favoris</h2>
-                <button class="panel-close" aria-label="Fermer">✕</button>
+                <div class="panel-header-actions">
+                    <button id="export-favorites-btn" class="panel-action-btn" title="Exporter les favoris" aria-label="Exporter les favoris en JSON">↓ Export</button>
+                    <label id="import-favorites-label" class="panel-action-btn" title="Importer des favoris" aria-label="Importer des favoris depuis JSON">↑ Import<input type="file" id="import-favorites-input" accept=".json" style="display:none"></label>
+                    <button class="panel-close" aria-label="Fermer">✕</button>
+                </div>
             </div>
             <div id="favorites-list" class="panel-content"></div>
+        </div>
+    </div>
+
+    <!-- Panel Stats -->
+    <div id="stats-panel" class="panel hidden" role="dialog" aria-modal="true" aria-label="Statistiques" aria-hidden="true">
+        <div class="panel-inner">
+            <div class="panel-header">
+                <h2>~ Statistiques</h2>
+                <button class="panel-close" aria-label="Fermer">✕</button>
+            </div>
+            <div id="stats-content" class="panel-content stats-content"></div>
         </div>
     </div>
 
@@ -600,6 +666,11 @@
                 audioToggle.click();
             }
         });
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+        }
     </script>
 </body>
 </html>

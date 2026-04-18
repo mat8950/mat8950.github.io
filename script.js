@@ -3,6 +3,8 @@ let bookmarkData = { folders: [], bookmarks: [] };
 let currentFolder = null;
 let allBookmarks = [];
 let searchQuery = '';
+let currentSort = 'default';
+let activeFilters = { tags: [], dateRange: null }; // dateRange: null | 30 | 90 | 365
 let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
 
 // ===== MÉTADONNÉES CSV =====
@@ -37,11 +39,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('App initializing...');
     initThemeToggle();
     initSearch();
+    initSortBar();
     initKeyboardNavigation();
     initLazyLoading();
     await loadBookmarks();
     initFavoritesPanel();
     initUpdatesPanel();
+    initStatsPanel();
+    initImportBookmarks();
     console.log('Rendering folder tree...');
     renderFolderTree();
     console.log('Showing initial folder...');
@@ -80,6 +85,8 @@ async function loadBookmarks() {
 
         await loadMetadata();
         buildSuggestionPool();
+        const totalEl = document.getElementById('bookmark-total');
+        if (totalEl) totalEl.textContent = allBookmarks.length;
     } catch (error) {
         console.error('Error loading bookmarks:', error);
         alert('Erreur lors du chargement des marque-pages: ' + error.message);
@@ -206,10 +213,186 @@ function parseBookmarkTree(doc) {
     return { folders, bookmarks };
 }
 
+function addTagFilter(tag) {
+    const t = tag.toLowerCase();
+    if (!activeFilters.tags.includes(t)) {
+        activeFilters.tags.push(t);
+        displayBookmarks();
+    }
+}
+
+function renderFilterBar() {
+    let bar = document.getElementById('filter-bar');
+    if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'filter-bar';
+        bar.className = 'filter-bar';
+        const sortBar = document.getElementById('sort-bar');
+        sortBar?.insertAdjacentElement('afterend', bar);
+    }
+    bar.innerHTML = '';
+
+    const hasFilters = activeFilters.tags.length > 0 || activeFilters.dateRange;
+    if (!hasFilters) { bar.classList.add('hidden'); return; }
+    bar.classList.remove('hidden');
+
+    // Date chip
+    if (activeFilters.dateRange) {
+        const label = { 30: '30 jours', 90: '90 jours', 365: '1 an' }[activeFilters.dateRange] || activeFilters.dateRange + 'j';
+        bar.appendChild(makeFilterChip('📅 ' + label, () => { activeFilters.dateRange = null; displayBookmarks(); }));
+    }
+
+    // Tag chips
+    activeFilters.tags.forEach(tag => {
+        bar.appendChild(makeFilterChip('#' + tag, () => {
+            activeFilters.tags = activeFilters.tags.filter(t => t !== tag);
+            displayBookmarks();
+        }));
+    });
+
+    // Clear all
+    if (activeFilters.tags.length > 1 || (activeFilters.tags.length > 0 && activeFilters.dateRange)) {
+        const clearAll = document.createElement('button');
+        clearAll.className = 'filter-clear-all';
+        clearAll.textContent = 'Tout effacer';
+        clearAll.addEventListener('click', () => { activeFilters = { tags: [], dateRange: null }; displayBookmarks(); });
+        bar.appendChild(clearAll);
+    }
+}
+
+function makeFilterChip(label, onRemove) {
+    const chip = document.createElement('span');
+    chip.className = 'filter-chip';
+    chip.innerHTML = `${label} <button aria-label="Retirer le filtre ${label}">✕</button>`;
+    chip.querySelector('button').addEventListener('click', onRemove);
+    return chip;
+}
+
+function initSortBar() {
+    document.querySelectorAll('.sort-btn[data-sort]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            currentSort = btn.dataset.sort;
+            document.querySelectorAll('.sort-btn[data-sort]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            displayBookmarks();
+        });
+    });
+
+    const compactBtn = document.getElementById('compact-btn');
+    const content = document.querySelector('.content');
+    if (compactBtn && content) {
+        if (localStorage.getItem('compactMode') === 'true') {
+            content.classList.add('compact');
+            compactBtn.classList.add('active');
+        }
+        compactBtn.addEventListener('click', () => {
+            content.classList.toggle('compact');
+            const on = content.classList.contains('compact');
+            compactBtn.classList.toggle('active', on);
+            localStorage.setItem('compactMode', on);
+        });
+    }
+
+    const dateFilter = document.getElementById('date-filter');
+    if (dateFilter) {
+        dateFilter.addEventListener('change', () => {
+            activeFilters.dateRange = dateFilter.value ? parseInt(dateFilter.value) : null;
+            displayBookmarks();
+        });
+    }
+}
+
+// ─── Import Chrome/Firefox bookmarks ──────────────────────────────────────
+function initImportBookmarks() {
+    const input = document.getElementById('import-bookmarks-input');
+    const zone  = document.getElementById('import-bookmarks-zone');
+    if (!input || !zone) return;
+
+    input.addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (file) processImportFile(file);
+        input.value = '';
+    });
+
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', e => {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (file) processImportFile(file);
+    });
+}
+
+function processImportFile(file) {
+    const reader = new FileReader();
+    reader.onload = ev => {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(ev.target.result, 'text/html');
+        const links = doc.querySelectorAll('A[HREF]');
+        const existingUrls = new Set(allBookmarks.map(b => b.url));
+        let added = 0;
+
+        links.forEach(a => {
+            const url = a.getAttribute('HREF');
+            const title = a.textContent.trim();
+            if (!url || !title || existingUrls.has(url)) return;
+            if (!url.startsWith('http')) return;
+
+            // Reconstituer le chemin de dossier depuis les H3 parents
+            const folderPath = [];
+            let el = a.parentElement;
+            while (el) {
+                if (el.tagName === 'DL') {
+                    const prev = el.previousElementSibling;
+                    if (prev?.tagName === 'DT') {
+                        const h3 = prev.querySelector('H3');
+                        if (h3) folderPath.unshift(h3.textContent.trim());
+                    }
+                }
+                el = el.parentElement;
+            }
+
+            const bm = { title, url, icon: null, iconUri: null, folder: folderPath.join(' > ') || 'Import', folderPath };
+            allBookmarks.push(bm);
+            existingUrls.add(url);
+            added++;
+        });
+
+        showImportFeedback(added);
+        renderFolderTree();
+        displayBookmarks();
+        const totalEl = document.getElementById('bookmark-total');
+        if (totalEl) totalEl.textContent = allBookmarks.length;
+    };
+    reader.readAsText(file);
+}
+
+function showImportFeedback(count) {
+    const zone = document.getElementById('import-bookmarks-zone');
+    if (!zone) return;
+    const orig = zone.childNodes[0].textContent;
+    zone.childNodes[0].textContent = `✓ ${count} ajoutés`;
+    zone.classList.add('import-success');
+    setTimeout(() => {
+        zone.childNodes[0].textContent = orig;
+        zone.classList.remove('import-success');
+    }, 2500);
+}
+
 // Render folder tree in sidebar
+function collapseAllFolders() {
+    document.querySelectorAll('.folder-children.show').forEach(el => el.classList.remove('show'));
+    document.querySelectorAll('.folder-item.expanded').forEach(el => el.classList.remove('expanded'));
+    localStorage.setItem('expandedFolders', '[]');
+}
+
 function renderFolderTree() {
     const folderTree = document.getElementById('folder-tree');
     folderTree.innerHTML = '';
+
+    const collapseBtn = document.getElementById('collapse-all-btn');
+    if (collapseBtn) collapseBtn.onclick = collapseAllFolders;
 
     // Add "All Bookmarks" option
     const allItem = createFolderItem('Tous les marque-pages', null, '📚');
@@ -311,8 +494,18 @@ function createFolderItem(name, pathString, icon, level = 0) {
     const nameSpan = document.createElement('span');
     nameSpan.textContent = name;
 
+    const count = pathString === null
+        ? allBookmarks.length
+        : allBookmarks.filter(b => b.folder === pathString || b.folder.startsWith(pathString + ' > ')).length;
+
+    const countSpan = document.createElement('span');
+    countSpan.className = 'folder-count';
+    countSpan.textContent = count;
+    countSpan.setAttribute('aria-hidden', 'true');
+
     item.appendChild(iconSpan);
     item.appendChild(nameSpan);
+    item.appendChild(countSpan);
 
     if (pathString === null) {
         item.addEventListener('click', () => showFolder(null));
@@ -407,6 +600,44 @@ function displayBookmarks() {
                    b.url.toLowerCase().includes(q) ||
                    (meta?.description || '').toLowerCase().includes(q) ||
                    (meta?.tags || []).some(t => t.toLowerCase().includes(q));
+        });
+    }
+
+    // Filtre par tags actifs
+    if (activeFilters.tags.length > 0) {
+        filtered = filtered.filter(b => {
+            const meta = bookmarkMeta.get(b.url);
+            return activeFilters.tags.every(tag =>
+                (meta?.tags || []).some(t => t.toLowerCase() === tag.toLowerCase())
+            );
+        });
+    }
+
+    // Filtre par date
+    if (activeFilters.dateRange) {
+        const cutoff = (Date.now() / 1000) - (activeFilters.dateRange * 86400);
+        filtered = filtered.filter(b => {
+            const meta = bookmarkMeta.get(b.url);
+            return meta?.date_added && meta.date_added >= cutoff;
+        });
+    }
+
+    renderFilterBar();
+
+    // Tri
+    if (currentSort === 'alpha') {
+        filtered.sort((a, b) => a.title.localeCompare(b.title, 'fr'));
+    } else if (currentSort === 'date') {
+        filtered.sort((a, b) => {
+            const ma = bookmarkMeta.get(a.url);
+            const mb = bookmarkMeta.get(b.url);
+            return (mb?.date_added || 0) - (ma?.date_added || 0);
+        });
+    } else if (currentSort === 'domain') {
+        filtered.sort((a, b) => {
+            const da = new URL(a.url).hostname.replace('www.', '');
+            const db = new URL(b.url).hostname.replace('www.', '');
+            return da.localeCompare(db);
         });
     }
 
@@ -565,6 +796,7 @@ function getFaviconUrl(bookmark) {
 function createBookmarkCard(bookmark) {
     const card = document.createElement('div');
     card.className = 'bookmark-card';
+    card.dataset.url = bookmark.url;
 
     // Accessibilité
     card.setAttribute('role', 'listitem');
@@ -611,6 +843,7 @@ function createBookmarkCard(bookmark) {
 
     // Métadonnées enrichies depuis CSV
     const meta = bookmarkMeta.get(bookmark.url);
+    if (meta && meta.description) card.title = meta.description;
     if (meta) {
         if (meta.description) {
             const desc = document.createElement('div');
@@ -630,6 +863,7 @@ function createBookmarkCard(bookmark) {
                 pill.textContent = tag;
                 pill.addEventListener('click', (e) => {
                     e.stopPropagation();
+                    addTagFilter(tag);
                     const searchInput = document.getElementById('search');
                     searchInput.value = tag;
                     searchQuery = tag;
@@ -679,8 +913,20 @@ function createBookmarkCard(bookmark) {
         }
     });
 
+    // Bouton suggestions similaires
+    const similarBtn = document.createElement('button');
+    similarBtn.className = 'similar-btn';
+    similarBtn.textContent = '~';
+    similarBtn.title = 'Similaires';
+    similarBtn.setAttribute('aria-label', 'Voir les bookmarks similaires');
+    similarBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        showSimilarPopover(bookmark, similarBtn);
+    });
+
     card.appendChild(icon);
     card.appendChild(info);
+    card.appendChild(similarBtn);
     card.appendChild(favoriteBtn);
 
     card.addEventListener('click', () => {
@@ -698,6 +944,74 @@ function createBookmarkCard(bookmark) {
     return card;
 }
 
+// ─── Suggestions similaires ───────────────────────────────────────────────
+function getSimilarBookmarks(bookmark, limit = 5) {
+    const meta = bookmarkMeta.get(bookmark.url);
+    const tags = meta?.tags || [];
+    if (tags.length === 0) return [];
+
+    return allBookmarks
+        .filter(b => b.url !== bookmark.url)
+        .map(b => {
+            const bMeta = bookmarkMeta.get(b.url);
+            const bTags = bMeta?.tags || [];
+            const shared = tags.filter(t => bTags.includes(t)).length;
+            return { bookmark: b, score: shared };
+        })
+        .filter(x => x.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, limit)
+        .map(x => x.bookmark);
+}
+
+let currentPopover = null;
+
+function showSimilarPopover(bookmark, anchor) {
+    // Fermer popover existant
+    if (currentPopover) { currentPopover.remove(); currentPopover = null; }
+
+    const similar = getSimilarBookmarks(bookmark);
+    const popover = document.createElement('div');
+    popover.className = 'similar-popover';
+
+    if (similar.length === 0) {
+        popover.innerHTML = '<span class="similar-empty">Aucun similaire trouvé</span>';
+    } else {
+        popover.innerHTML = '<div class="similar-title">Similaires</div>' +
+            similar.map(b => {
+                let host = '';
+                try { host = new URL(b.url).hostname.replace('www.', ''); } catch {}
+                return `<a class="similar-item" href="${b.url}" target="_blank" rel="noopener">
+                    <span class="similar-name">${b.title}</span>
+                    <span class="similar-host">${host}</span>
+                </a>`;
+            }).join('');
+    }
+
+    document.body.appendChild(popover);
+    currentPopover = popover;
+
+    // Positionner
+    const rect = anchor.getBoundingClientRect();
+    const pw = popover.offsetWidth || 240;
+    let left = rect.right - pw;
+    let top = rect.bottom + 6;
+    if (left < 8) left = 8;
+    if (top + 200 > window.innerHeight) top = rect.top - 200 - 6;
+    popover.style.left = left + 'px';
+    popover.style.top  = top  + 'px';
+
+    // Fermer au clic extérieur
+    setTimeout(() => {
+        document.addEventListener('click', function close(e) {
+            if (!popover.contains(e.target) && e.target !== anchor) {
+                popover.remove(); currentPopover = null;
+                document.removeEventListener('click', close);
+            }
+        });
+    }, 0);
+}
+
 // ===== COULEURS 3D PAR THÈME =====
 const THEME_3D = {
     'dark':        { grid: '#ffffff', particles: '#ffffff', lines: '#ffffff', cubes: '#ffffff', rings: '#ffffff' },
@@ -706,6 +1020,8 @@ const THEME_3D = {
     'apple-light': { grid: '#0071e3', particles: '#0071e3', lines: '#0066cc', cubes: '#0071e3', rings: '#0066cc' },
     'nord':        { grid: '#88c0d0', particles: '#81a1c1', lines: '#88c0d0', cubes: '#5e81ac', rings: '#88c0d0' },
     'dracula':     { grid: '#ff79c6', particles: '#bd93f9', lines: '#ff79c6', cubes: '#6272a4', rings: '#bd93f9' },
+    'catppuccin':  { grid: '#cba6f7', particles: '#89b4fa', lines: '#cba6f7', cubes: '#a6e3a1', rings: '#89b4fa' },
+    'gruvbox':     { grid: '#fabd2f', particles: '#fe8019', lines: '#fabd2f', cubes: '#b8bb26', rings: '#fabd2f' },
 };
 
 // ===== THEME SELECTOR =====
@@ -716,6 +1032,8 @@ const THEMES = {
     'apple-light': { label: 'APPLE LIGHT', light: true  },
     'nord':        { label: 'NORD',        light: false },
     'dracula':     { label: 'DRACULA',     light: false },
+    'catppuccin':  { label: 'CATPPUCCIN',  light: false },
+    'gruvbox':     { label: 'GRUVBOX',     light: false },
 };
 
 function applyTheme(theme) {
@@ -1047,6 +1365,28 @@ function handleKeyboardNavigation(e) {
             }
             break;
 
+        case 'f':
+        case 'F':
+            toggleSidebar();
+            break;
+
+        case '?':
+            toggleShortcutsOverlay();
+            break;
+
+        case 'c':
+        case 'C':
+            if (keyboardMode === 'bookmarks' && selectedBookmarkIndex >= 0) {
+                const selectedCard = bookmarkCards[selectedBookmarkIndex];
+                const urlToCopy = selectedCard?.dataset.url;
+                if (urlToCopy) {
+                    navigator.clipboard.writeText(urlToCopy).then(() => {
+                        showCopyFeedback(selectedCard);
+                    });
+                }
+            }
+            break;
+
         case 'Escape':
             clearFolderSelection(visibleFolderItems);
             clearBookmarkSelection(bookmarkCards);
@@ -1056,6 +1396,46 @@ function handleKeyboardNavigation(e) {
             break;
     }
 }
+
+function showCopyFeedback(card) {
+    const prev = card.querySelector('.copy-feedback');
+    if (prev) prev.remove();
+    const fb = document.createElement('span');
+    fb.className = 'copy-feedback';
+    fb.textContent = '✓ Copié';
+    card.appendChild(fb);
+    setTimeout(() => fb.remove(), 1400);
+}
+
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const container = document.querySelector('.container');
+    if (!sidebar) return;
+    sidebar.classList.toggle('collapsed');
+    container.classList.toggle('sidebar-collapsed');
+    localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+}
+
+function toggleShortcutsOverlay() {
+    const overlay = document.getElementById('shortcuts-overlay');
+    if (!overlay) return;
+    overlay.classList.toggle('hidden');
+}
+
+// Init overlay fermeture
+document.addEventListener('DOMContentLoaded', () => {
+    const overlay = document.getElementById('shortcuts-overlay');
+    const closeBtn = document.getElementById('shortcuts-close');
+    if (closeBtn) closeBtn.addEventListener('click', () => overlay.classList.add('hidden'));
+    if (overlay) overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.add('hidden'); });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && overlay && !overlay.classList.contains('hidden')) {
+            overlay.classList.add('hidden');
+        }
+    });
+    // Restaurer état sidebar
+    if (localStorage.getItem('sidebarCollapsed') === 'true') toggleSidebar();
+});
 
 function selectFolder(index, folderItems) {
     // Nettoyer TOUS les folder-items, pas seulement ceux passés en paramètre
@@ -1147,10 +1527,50 @@ function initFavoritesPanel() {
             return;
         }
 
+        let dragSrc = null;
+
+        // Délégation sur le container — évite les interférences des éléments enfants
+        list.addEventListener('dragover', e => {
+            e.preventDefault();
+            const target = e.target.closest('.fav-entry');
+            if (target && target !== dragSrc) {
+                list.querySelectorAll('.fav-entry').forEach(el => el.classList.remove('drag-over'));
+                target.classList.add('drag-over');
+            }
+        });
+
+        list.addEventListener('drop', e => {
+            e.preventDefault();
+            const target = e.target.closest('.fav-entry');
+            if (!dragSrc || !target || dragSrc === target) return;
+            const si = favorites.indexOf(dragSrc.dataset.url);
+            const ti = favorites.indexOf(target.dataset.url);
+            if (si === -1 || ti === -1) return;
+            favorites.splice(si, 1);
+            favorites.splice(ti, 0, dragSrc.dataset.url);
+            localStorage.setItem('favorites', JSON.stringify(favorites));
+            dragSrc = null;
+            renderFavorites();
+            if (currentFolder === null) displayBookmarks();
+        });
+
+        list.addEventListener('dragleave', e => {
+            if (!list.contains(e.relatedTarget)) {
+                list.querySelectorAll('.fav-entry').forEach(el => el.classList.remove('drag-over'));
+            }
+        });
+
         favBMs.forEach(b => {
             const meta = bookmarkMeta.get(b.url);
             const entry = document.createElement('div');
             entry.className = 'timeline-entry fav-entry';
+            entry.draggable = true;
+            entry.dataset.url = b.url;
+
+            const handle = document.createElement('span');
+            handle.className = 'fav-drag-handle';
+            handle.textContent = '⠿';
+            handle.setAttribute('aria-hidden', 'true');
 
             const rootCat = (b.folder || '').split(' > ')[0];
             let hostname = '';
@@ -1181,6 +1601,19 @@ function initFavoritesPanel() {
                 if (currentFolder === null) displayBookmarks();
             });
 
+            // Drag & drop
+            entry.addEventListener('dragstart', e => {
+                dragSrc = entry;
+                entry.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', b.url);
+            });
+            entry.addEventListener('dragend', () => {
+                entry.classList.remove('dragging');
+                list.querySelectorAll('.fav-entry').forEach(el => el.classList.remove('drag-over'));
+            });
+
+            entry.appendChild(handle);
             entry.appendChild(cat);
             entry.appendChild(name);
             entry.appendChild(removeBtn);
@@ -1207,12 +1640,171 @@ function initFavoritesPanel() {
         panel.setAttribute('aria-hidden', 'true');
     }
 
+    // Export
+    document.getElementById('export-favorites-btn')?.addEventListener('click', () => {
+        const favBMs = getFavoriteBookmarks().map(b => ({ url: b.url, title: b.title }));
+        const blob = new Blob([JSON.stringify(favBMs, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `favoris-${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+    });
+
+    // Import
+    document.getElementById('import-favorites-input')?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            try {
+                const data = JSON.parse(ev.target.result);
+                if (!Array.isArray(data)) throw new Error('Format invalide');
+                let added = 0;
+                data.forEach(item => {
+                    if (item.url && !favorites.includes(item.url)) {
+                        favorites.push(item.url);
+                        added++;
+                    }
+                });
+                localStorage.setItem('favorites', JSON.stringify(favorites));
+                refreshBadge();
+                renderFavorites();
+                e.target.value = '';
+            } catch {
+                alert('Fichier JSON invalide.');
+            }
+        };
+        reader.readAsText(file);
+    });
+
     // Mettre à jour le badge quand toggleFavorite est appelé
     const _origToggle = toggleFavorite;
     toggleFavorite = function(url) {
         _origToggle(url);
         refreshBadge();
     };
+}
+
+// ─── Stats ────────────────────────────────────────────────────────────────
+function initStatsPanel() {
+    const btn   = document.getElementById('stats-btn');
+    const panel = document.getElementById('stats-panel');
+    const close = panel?.querySelector('.panel-close');
+    if (!btn || !panel) return;
+
+    btn.addEventListener('click', () => {
+        renderStats();
+        panel.classList.remove('hidden');
+        panel.setAttribute('aria-hidden', 'false');
+    });
+    close?.addEventListener('click', closeStats);
+    panel.addEventListener('click', e => { if (e.target === panel) closeStats(); });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && !panel.classList.contains('hidden')) closeStats();
+    });
+
+    function closeStats() {
+        panel.classList.add('hidden');
+        panel.setAttribute('aria-hidden', 'true');
+    }
+}
+
+function renderStats() {
+    const el = document.getElementById('stats-content');
+    if (!el) return;
+
+    const total = allBookmarks.length;
+    const withMeta = allBookmarks.filter(b => bookmarkMeta.has(b.url)).length;
+
+    // Top catégories
+    const catCount = {};
+    allBookmarks.forEach(b => {
+        const root = (b.folder || 'Sans catégorie').split(' > ')[0] || 'Sans catégorie';
+        catCount[root] = (catCount[root] || 0) + 1;
+    });
+    const topCats = Object.entries(catCount).sort((a,b) => b[1]-a[1]).slice(0, 8);
+
+    // Top domaines
+    const domCount = {};
+    allBookmarks.forEach(b => {
+        try {
+            const h = new URL(b.url).hostname.replace('www.', '');
+            domCount[h] = (domCount[h] || 0) + 1;
+        } catch {}
+    });
+    const topDoms = Object.entries(domCount).sort((a,b) => b[1]-a[1]).slice(0, 10);
+
+    // Top tags
+    const tagCount = {};
+    bookmarkMeta.forEach(meta => {
+        (meta.tags || []).forEach(t => { tagCount[t] = (tagCount[t] || 0) + 1; });
+    });
+    const topTags = Object.entries(tagCount).sort((a,b) => b[1]-a[1]).slice(0, 15);
+
+    // Timeline par mois (12 derniers mois)
+    const now = Date.now() / 1000;
+    const months = {};
+    for (let i = 11; i >= 0; i--) {
+        const d = new Date(); d.setMonth(d.getMonth() - i);
+        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        months[key] = 0;
+    }
+    bookmarkMeta.forEach(meta => {
+        if (!meta.date_added) return;
+        const d = new Date(meta.date_added * 1000);
+        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        if (key in months) months[key]++;
+    });
+    const maxMonth = Math.max(...Object.values(months), 1);
+
+    el.innerHTML = `
+        <div class="stats-kpis">
+            <div class="stats-kpi"><span class="kpi-value">${total}</span><span class="kpi-label">Bookmarks</span></div>
+            <div class="stats-kpi"><span class="kpi-value">${topCats.length}</span><span class="kpi-label">Catégories</span></div>
+            <div class="stats-kpi"><span class="kpi-value">${Object.keys(domCount).length}</span><span class="kpi-label">Domaines</span></div>
+            <div class="stats-kpi"><span class="kpi-value">${Math.round(withMeta/total*100)}%</span><span class="kpi-label">Avec description</span></div>
+        </div>
+
+        <div class="stats-section">
+            <h3>Ajouts — 12 derniers mois</h3>
+            <div class="stats-timeline">
+                ${Object.entries(months).map(([k, v]) => `
+                    <div class="tl-bar-col">
+                        <div class="tl-bar" style="height:${Math.round(v/maxMonth*100)}%" title="${v} ajouts"></div>
+                        <span class="tl-bar-label">${k.slice(5)}</span>
+                    </div>`).join('')}
+            </div>
+        </div>
+
+        <div class="stats-cols">
+            <div class="stats-section">
+                <h3>Top catégories</h3>
+                ${topCats.map(([name, n]) => `
+                    <div class="stats-bar-row">
+                        <span class="stats-bar-name">${name}</span>
+                        <div class="stats-bar-track"><div class="stats-bar-fill" style="width:${Math.round(n/topCats[0][1]*100)}%"></div></div>
+                        <span class="stats-bar-count">${n}</span>
+                    </div>`).join('')}
+            </div>
+            <div class="stats-section">
+                <h3>Top domaines</h3>
+                ${topDoms.map(([name, n]) => `
+                    <div class="stats-bar-row">
+                        <span class="stats-bar-name">${name}</span>
+                        <div class="stats-bar-track"><div class="stats-bar-fill" style="width:${Math.round(n/topDoms[0][1]*100)}%"></div></div>
+                        <span class="stats-bar-count">${n}</span>
+                    </div>`).join('')}
+            </div>
+        </div>
+
+        <div class="stats-section">
+            <h3>Tags populaires</h3>
+            <div class="stats-tags">
+                ${topTags.map(([tag, n]) => `<span class="stats-tag-pill" style="font-size:${0.6 + Math.min(n/topTags[0][1], 1)*0.35}rem">${tag} <em>${n}</em></span>`).join('')}
+            </div>
+        </div>
+    `;
 }
 
 // ─── Utilitaires date ─────────────────────────────────────────────────────

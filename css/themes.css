@@ -551,12 +551,23 @@ body[data-theme^="apple"] :focus-visible {
 }
 
 /* ---- APPLE LIGHT spécifique ---- */
-body[data-theme="apple-light"] .sidebar { border-right-color: rgba(0,0,0,0.08); }
-body[data-theme="apple-light"] header   { border-bottom-color: rgba(0,0,0,0.08); }
+body[data-theme="apple-light"] .sidebar { border-right-color: rgba(0, 20, 100, 0.07); }
+body[data-theme="apple-light"] header   { border-bottom-color: rgba(0, 20, 100, 0.07); }
 
 body[data-theme="apple-light"] .bookmark-card:hover {
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.9),
-                0 2px 8px rgba(0,0,0,0.07);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.92),
+        0 6px 24px rgba(0, 15, 80, 0.11),
+        0 2px 6px rgba(0, 0, 40, 0.07),
+        0 1px 0 rgba(0, 0, 60, 0.04);
+}
+
+body[data-theme="apple-light"] .folder-card {
+    box-shadow: var(--shadow-card);
+}
+
+body[data-theme="apple-light"] .folder-card:hover {
+    box-shadow: var(--shadow-glass);
 }
 
 body[data-theme="apple-light"] #search {
@@ -564,7 +575,98 @@ body[data-theme="apple-light"] #search {
 }
 
 body[data-theme="apple-light"] .theme-option:hover {
-    background: rgba(0,122,255,0.08);
+    background: rgba(0, 122, 255, 0.08);
+}
+
+body[data-theme="apple-light"] ::-webkit-scrollbar-thumb {
+    background: rgba(0, 20, 100, 0.18);
+}
+
+body[data-theme="apple-light"] ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 20, 100, 0.32);
+}
+
+/* Sort bar — glass pills */
+body[data-theme="apple-light"] .sort-bar {
+    gap: 0.3rem;
+}
+
+body[data-theme="apple-light"] .sort-btn {
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    letter-spacing: 0;
+    text-transform: none;
+    border-radius: 100px;
+    background: var(--glass-regular);
+    border: 1px solid var(--border-glass);
+    color: var(--text-secondary);
+    box-shadow: inset 0 1px 0 var(--border-inner), var(--shadow-card);
+    backdrop-filter: var(--blur-thin);
+    -webkit-backdrop-filter: var(--blur-thin);
+    padding: 0.3rem 0.8rem;
+}
+
+body[data-theme="apple-light"] .sort-btn:hover {
+    background: var(--glass-thick);
+    color: var(--text-primary);
+    border-color: var(--border-bright);
+}
+
+body[data-theme="apple-light"] .sort-btn.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 0 0 1px var(--accent-dim);
+}
+
+body[data-theme="apple-light"] .date-filter-select {
+    border-radius: 100px;
+}
+
+body[data-theme="apple-light"] .sort-label {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* Collapse btn — discret, pas de border */
+body[data-theme="apple-light"] #collapse-all-btn {
+    font-size: 0.8rem;
+    opacity: 0.45;
+    border: none;
+    background: transparent;
+}
+
+/* Filter chips — glass style */
+body[data-theme="apple-light"] .filter-chip {
+    border-radius: 100px;
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-family: var(--font-body);
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+/* Stats KPIs — glass cards */
+body[data-theme="apple-light"] .stats-kpi {
+    background: var(--glass-card);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
+    backdrop-filter: var(--blur-thin);
+    -webkit-backdrop-filter: var(--blur-thin);
+}
+
+body[data-theme="apple-light"] .stats-bar-fill {
+    background: var(--accent);
+    opacity: 0.5;
+}
+
+body[data-theme="apple-light"] .tl-bar {
+    background: var(--accent);
+    opacity: 0.4;
 }
 
 /* ---- APPLE DARK spécifique ---- */
@@ -653,6 +755,127 @@ body[data-theme="dracula"] :focus-visible { outline-color: var(--accent); }
 body[data-theme="dracula"] ::-webkit-scrollbar-thumb       { background: rgba(189,147,249,0.35); }
 body[data-theme="dracula"] ::-webkit-scrollbar-thumb:hover { background: var(--accent-secondary); }
 
-body[data-theme="dracula"] .bookmark-url { font-style: italic; }
+body[data-theme="dracula"] .bookmark-url { font-style: italic; color: #8be9fd; }
+
+body[data-theme="dracula"] .bookmark-card:hover {
+    background: rgba(255, 121, 198, 0.06);
+    box-shadow: 0 0 0 1px rgba(189, 147, 249, 0.15), var(--shadow-card);
+}
 
 body[data-theme="dracula"] .favorites-header { color: #f1fa8c; border-bottom-color: rgba(241,250,140,0.3); }
+
+/* ==============================================
+   DARK — améliorations OLED
+   ============================================== */
+
+body:not([data-theme]) .bookmark-card:hover,
+body[data-theme="dark"] .bookmark-card:hover {
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), var(--shadow-card);
+}
+
+/* ==============================================
+   NORD — améliorations Aurora
+   ============================================== */
+
+body[data-theme="nord"] header {
+    background: linear-gradient(135deg, rgba(46, 52, 64, 0.97), rgba(59, 66, 82, 0.94));
+    border-bottom-color: rgba(136, 192, 208, 0.18);
+}
+
+body[data-theme="nord"] .bookmark-card:hover {
+    background: rgba(136, 192, 208, 0.07);
+    box-shadow: 0 0 0 1px rgba(136, 192, 208, 0.18), var(--shadow-card);
+}
+
+/* ==============================================
+   CATPPUCCIN MOCHA
+   ============================================== */
+
+body[data-theme="catppuccin"] .folder-item:hover,
+body[data-theme="catppuccin"] .folder-item.active {
+    background: rgba(203, 166, 247, 0.09);
+    border-left-color: var(--accent);
+    color: var(--accent);
+}
+
+body[data-theme="catppuccin"] .folder-item.keyboard-selected {
+    background: rgba(203, 166, 247, 0.12);
+    border-left-color: var(--accent);
+    outline-color: var(--accent);
+    color: var(--accent);
+}
+
+body[data-theme="catppuccin"] .bookmark-card:hover {
+    background: rgba(203, 166, 247, 0.07);
+    box-shadow: 0 0 0 1px rgba(203, 166, 247, 0.18), var(--shadow-card);
+}
+
+body[data-theme="catppuccin"] .bookmark-card:hover::before,
+body[data-theme="catppuccin"] .bookmark-card:hover .bookmark-title,
+body[data-theme="catppuccin"] .bookmark-card:hover::after { color: var(--accent); }
+
+body[data-theme="catppuccin"] .bookmark-card:hover .bookmark-url {
+    color: var(--accent-secondary);
+    opacity: 0.85;
+}
+
+body[data-theme="catppuccin"] .bookmark-card.keyboard-selected {
+    background: rgba(203, 166, 247, 0.09);
+    outline-color: var(--accent);
+}
+
+body[data-theme="catppuccin"] :focus-visible { outline-color: var(--accent); }
+
+body[data-theme="catppuccin"] ::-webkit-scrollbar-thumb       { background: rgba(203, 166, 247, 0.35); }
+body[data-theme="catppuccin"] ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+body[data-theme="catppuccin"] #search:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(203,166,247,0.15); }
+
+body[data-theme="catppuccin"] .favorites-header { color: #cba6f7; border-bottom-color: rgba(203,166,247,0.3); }
+
+/* ==============================================
+   GRUVBOX DARK
+   ============================================== */
+
+body[data-theme="gruvbox"] .folder-item:hover,
+body[data-theme="gruvbox"] .folder-item.active {
+    background: rgba(250, 189, 47, 0.09);
+    border-left-color: var(--accent);
+    color: var(--accent);
+}
+
+body[data-theme="gruvbox"] .folder-item.keyboard-selected {
+    background: rgba(250, 189, 47, 0.12);
+    border-left-color: var(--accent);
+    outline-color: var(--accent);
+    color: var(--accent);
+}
+
+body[data-theme="gruvbox"] .bookmark-card:hover {
+    background: rgba(250, 189, 47, 0.07);
+    box-shadow: 0 0 0 1px rgba(250, 189, 47, 0.18), var(--shadow-card);
+}
+
+body[data-theme="gruvbox"] .bookmark-card:hover::before,
+body[data-theme="gruvbox"] .bookmark-card:hover .bookmark-title,
+body[data-theme="gruvbox"] .bookmark-card:hover::after { color: var(--accent); }
+
+body[data-theme="gruvbox"] .bookmark-card:hover .bookmark-url {
+    color: var(--accent-secondary);
+    opacity: 0.85;
+}
+
+body[data-theme="gruvbox"] .bookmark-card.keyboard-selected {
+    background: rgba(250, 189, 47, 0.09);
+    outline-color: var(--accent);
+}
+
+body[data-theme="gruvbox"] :focus-visible { outline-color: var(--accent); }
+
+body[data-theme="gruvbox"] ::-webkit-scrollbar-thumb       { background: rgba(250, 189, 47, 0.35); }
+body[data-theme="gruvbox"] ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+body[data-theme="gruvbox"] #search:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(250,189,47,0.15); }
+
+body[data-theme="gruvbox"] .favorites-header { color: #fabd2f; border-bottom-color: rgba(250,189,47,0.3); }

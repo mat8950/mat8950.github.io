@@ -10,10 +10,33 @@
 
 ## Idées futures
 
-- [ ] Drag & drop pour réorganiser les favoris
-- [ ] Export/import des favoris en JSON
-- [ ] Filtres par domaine ou date d'ajout
-- [ ] Mode compact pour afficher plus de bookmarks
+### Raccourcis & UX rapide
+- [x] Raccourci `C` pour copier l'URL du bookmark sélectionné au clavier
+- [x] Raccourci `?` pour afficher un overlay de tous les raccourcis clavier
+- [x] Raccourci `F` pour masquer/afficher la sidebar (plein écran)
+- [x] Bouton "Tout replier" les dossiers dans la sidebar
+
+### Affichage & informations
+- [x] Afficher le nombre de bookmarks par dossier dans la sidebar
+- [x] Compteur total de bookmarks dans le header
+- [x] Afficher la `date_added` sur les cartes bookmark
+- [x] Tooltip au hover sur les cartes (description depuis le CSV)
+
+### Recherche & filtres
+- [x] Recherche dans les descriptions (actuellement nom + URL seulement)
+- [x] Tri des bookmarks : alphabétique, par date, par domaine
+- [x] Filtres combinés : tags + catégorie + date
+
+### Existant à améliorer
+- [x] Drag & drop pour réorganiser les favoris
+- [x] Export/import des favoris en JSON
+- [x] Mode compact pour afficher plus de bookmarks
+
+### Ambitieux
+- [x] Page de stats : top domaines, distribution par catégorie, timeline d'ajout
+- [x] PWA (installable, cache offline via Service Worker)
+- [x] Import direct depuis Chrome/Firefox (glisser-déposer un export `.html`)
+- [x] Suggestions de bookmarks similaires (par tags communs)
 
 ## Terminé
 
@@ -66,4 +89,4 @@
 
 ---
 
-*Dernière mise à jour : 19 janvier 2026*
+*Dernière mise à jour : 17 avril 2026*
