@@ -62,57 +62,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('App initialized!');
 });
 
-// Load and parse bookmarks.html + bookmarks.csv
+// Load bookmarks from bookmarks.csv (single source of truth)
 async function loadBookmarks() {
     try {
-        console.log('Loading bookmarks.html...');
-        const response = await fetch('bookmarks.html');
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const html = await response.text();
-        console.log('Bookmarks file loaded, size:', html.length);
-
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        console.log('Document parsed');
-
-        bookmarkData = parseBookmarkTree(doc);
-        console.log('Bookmarks parsed:', {
-            folders: bookmarkData.folders.length,
-            bookmarks: allBookmarks.length
-        });
-
-        await loadMetadata();
+        const res = await fetch('bookmarks.csv');
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const text = await res.text();
+        const rows = parseCSV(text);
+        buildFromCSV(rows);
         buildSuggestionPool();
         const totalEl = document.getElementById('bookmark-total');
         if (totalEl) totalEl.textContent = allBookmarks.length;
     } catch (error) {
         console.error('Error loading bookmarks:', error);
         alert('Erreur lors du chargement des marque-pages: ' + error.message);
-    }
-}
-
-// ─── Chargement métadonnées CSV ────────────────────────────────────────────
-async function loadMetadata() {
-    try {
-        const res = await fetch('bookmarks.csv');
-        if (!res.ok) return;
-        const text = await res.text();
-        const rows = parseCSV(text);
-        rows.forEach(row => {
-            if (row.url) bookmarkMeta.set(row.url, {
-                name:        row.name        || '',
-                category:    row.category    || '',
-                subcategory: row.subcategory || '',
-                description: row.description || '',
-                tags:        row.tags        ? row.tags.split('|').filter(Boolean) : [],
-                date_added:  row.date_added  ? parseInt(row.date_added) : 0,
-            });
-        });
-        console.log(`Metadata loaded: ${bookmarkMeta.size} entries`);
-    } catch (e) {
-        console.warn('Metadata CSV not available:', e);
     }
 }
 
@@ -147,70 +110,52 @@ function parseCSVLine(line) {
     return result;
 }
 
-// Parse the bookmark HTML structure - Simple approach
-function parseBookmarkTree(doc) {
-    const folders = [];
-    const bookmarks = [];
+function buildFromCSV(rows) {
+    bookmarkData.folders = [];
+    bookmarkData.bookmarks = [];
+    allBookmarks.length = 0;
+    bookmarkMeta.clear();
 
-    // Find all DT elements in the document
-    const allDTs = doc.querySelectorAll('DT');
-    console.log(`Found ${allDTs.length} DT elements total`);
+    const seenFolderPaths = new Set();
 
-    // Build a path map based on nesting level
-    const pathStack = [];
+    rows.forEach(row => {
+        if (!row.url || !row.name) return;
+        const category    = (row.category    || '').trim();
+        const subcategory = (row.subcategory || '').trim();
 
-    for (const dt of allDTs) {
-        const h3 = dt.querySelector('H3');
-        const a = dt.querySelector('A');
-
-        // Calculate nesting level by counting parent DL elements
-        let level = 0;
-        let parent = dt.parentElement;
-        while (parent) {
-            if (parent.tagName === 'DL') level++;
-            parent = parent.parentElement;
+        if (category && !seenFolderPaths.has(category)) {
+            seenFolderPaths.add(category);
+            bookmarkData.folders.push({ name: category, path: [category], pathString: category });
         }
 
-        // Adjust path stack to current level
-        pathStack.length = Math.max(0, level - 1);
-
-        if (h3) {
-            // It's a folder
-            const folderName = h3.textContent.trim();
-            pathStack.push(folderName);
-            const folderPath = [...pathStack];
-
-            folders.push({
-                name: folderName,
-                path: folderPath,
-                pathString: folderPath.join(' > ')
-            });
-
-            console.log(`Folder [level ${level}]:`, folderPath.join(' > '));
-        } else if (a) {
-            // It's a bookmark
-            const url = a.getAttribute('HREF');
-            const title = a.textContent.trim();
-            const icon = a.getAttribute('ICON');
-            const iconUri = a.getAttribute('ICON_URI');
-
-            if (url && title) {
-                const bookmark = {
-                    title,
-                    url,
-                    icon,
-                    iconUri,
-                    folder: pathStack.join(' > ') || 'Root',
-                    folderPath: [...pathStack]
-                };
-
-                bookmarks.push(bookmark);
-                allBookmarks.push(bookmark);
-            }
+        const folderString = subcategory ? `${category} > ${subcategory}` : category;
+        if (subcategory && !seenFolderPaths.has(folderString)) {
+            seenFolderPaths.add(folderString);
+            bookmarkData.folders.push({ name: subcategory, path: [category, subcategory], pathString: folderString });
         }
-    }
 
-    return { folders, bookmarks };
+        const bookmark = {
+            title: row.name,
+            url: row.url,
+            icon: null,
+            iconUri: null,
+            folder: folderString || 'Root',
+            folderPath: subcategory ? [category, subcategory] : (category ? [category] : [])
+        };
+        allBookmarks.push(bookmark);
+        bookmarkData.bookmarks.push(bookmark);
+
+        bookmarkMeta.set(row.url, {
+            name:        row.name,
+            category,
+            subcategory,
+            description: row.description || '',
+            tags:        row.tags ? row.tags.split('|').filter(Boolean) : [],
+            date_added:  row.date_added ? parseInt(row.date_added) : 0,
+        });
+    });
+
+    console.log('Built from CSV:', { folders: bookmarkData.folders.length, bookmarks: allBookmarks.length });
 }
 
 function addTagFilter(tag) {
