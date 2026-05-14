@@ -231,12 +231,14 @@ Sélecteur dans le header → attribut `data-theme` sur `body` → override CSS 
 
 | Thème | data-theme | Particularité |
 |---|---|---|
-| Dark (défaut) | `dark` | Grille Three.js blanche |
+| Dark (défaut) | `dark` | Grille Three.js blanche, OLED pur |
 | Light | `light` | Canvas Three.js masqué |
 | Apple Dark | `apple-dark` | Liquid Glass : backdrop-filter saturate(180%) blur(24px) |
-| Apple Light | `apple-light` | Liquid Glass sur fond clair |
-| Nord | `nord` | Palette nordique, canvas 40% opacity |
-| Dracula | `dracula` | Palette violette, canvas 35% opacity |
+| Apple Light | `apple-light` | Liquid Glass chromatique sur fond lavande-gray (#e8eaf2), orbes bleu/violet/pêche |
+| Nord | `nord` | Palette nordique aurora, canvas 35% opacity |
+| Dracula | `dracula` | Palette violette, canvas 30% opacity, URLs cyan |
+| Catppuccin Mocha | `catppuccin` | Pastels mauve/bleu sur #1e1e2e |
+| Gruvbox Dark | `gruvbox` | Accents jaune/orange chaud sur #282828 |
 
 Les couleurs Three.js sont mises à jour via `window.updateScene3DColors(cfg)` depuis `script.js`.
 
@@ -254,17 +256,41 @@ Toutes les tailles sont en `rem` pour s'adaater automatiquement à la résolutio
 | Feature | Déclencheur | localStorage |
 |---|---|---|
 | Nouveautés | Bouton header | `lastVisitDate` |
-| Favoris | Bouton header ★ | `favorites` (tableau d'URLs) |
-| Tags | Clic pill tag | Filtre la recherche |
+| Favoris | Bouton header ★ | `favorites` (tableau d'URLs ordonné) |
+| Stats | Bouton header `~ Stats` | — |
+| Tags | Clic pill tag | Filtre actif (chip) |
+| Tri | Barre sort-bar | `currentSort` |
+| Filtre date | Select sort-bar | `activeFilters.dateRange` |
+| Mode compact | Bouton `⊟` sort-bar | `compactMode` |
+| Sidebar toggle | Raccourci `F` | `sidebarCollapsed` |
 | Thème | Sélecteur header | `theme` |
 | Audio | Bouton speaker | `audioEnabled` |
 | Scroll | Auto `beforeunload` | `scrollPosition`, `sidebarScroll`, `contentScroll` |
 
 **Logique audio** : si `audioEnabled === 'false'` → ne jamais relancer automatiquement.
 
+### Favoris — features
+- Export JSON (bouton ↓ Export dans le panel)
+- Import JSON (bouton ↑ Import, merge sans doublons)
+- Drag & drop pour réordonner (handle `⠿`, ordre persisté dans `favorites[]`)
+
 ### Navigation clavier
 
-`↑/↓` dossiers · `→` bookmarks · `←` retour dossiers · `Enter` ouvrir · `Espace` toggle audio · `M` mute · `/` recherche · `Esc` quitter · `F` plein écran sidebar · `C` copier URL · `?` aide raccourcis
+`↑/↓` dossiers · `→` bookmarks · `←` retour dossiers · `Enter` ouvrir · `C` copier URL · `/` recherche · `Esc` quitter · `F` toggle sidebar · `?` overlay aide raccourcis · `Espace` toggle audio · `M` mute
+
+### PWA
+
+- `manifest.json` + `sw.js` (service worker)
+- Cache-first pour assets statiques, network-first pour `bookmarks.csv`
+- Installable depuis Chrome/Edge via le bouton dans la barre d'adresse
+
+### Import bookmarks externe
+
+Zone `↑ Import .html` en bas de la sidebar : drag & drop ou clic → parse Netscape Bookmark (export Chrome/Firefox), merge sans doublons, re-render immédiat. **Ne modifie pas `bookmarks.html` sur disque** (merge en mémoire uniquement).
+
+### Suggestions similaires
+
+Bouton `~` sur chaque carte (visible au hover) → popover avec les 5 bookmarks ayant le plus de tags en commun. Calculé par `getSimilarBookmarks()` via overlap de tags CSV.
 
 ---
 
