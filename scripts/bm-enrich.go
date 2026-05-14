@@ -1,0 +1,422 @@
+// bm-enrich.go — Injecte description + tags dans bookmarks.csv depuis la map META.
+// Ne modifie pas les entrées qui ont déjà une description.
+// Run: go run ./scripts/bm-enrich.go  (depuis la racine du dépôt)
+package main
+
+import (
+	"encoding/csv"
+	"fmt"
+	"os"
+)
+
+var enrichCSVPath = "bookmarks.csv"
+
+// META : url → {description_fr, tags pipe-séparés}
+var META = map[string][2]string{
+	"https://kubernetes.io":                              {"Orchestrateur de conteneurs open-source pour déployer et gérer des applications distribuées à grande échelle", "kubernetes|orchestration|container|devops|cloud-native"},
+	"https://www.docker.com":                            {"Plateforme de conteneurisation pour packager et déployer des applications dans des environnements isolés et reproductibles", "docker|container|devops|containerization"},
+	"https://buildah.io":                                {"Outil CLI pour construire des images de conteneurs OCI sans nécessiter de démon Docker en arrière-plan", "container|oci|build|docker|devops"},
+	"https://www.ansible.com":                           {"Outil d'automatisation IT pour la gestion de configuration, le déploiement et l'orchestration sans agent", "ansible|iac|automation|configuration-management|devops"},
+	"https://www.terraform.io":                          {"Outil d'Infrastructure as Code pour provisionner des ressources cloud de façon déclarative et reproductible", "terraform|iac|infrastructure|cloud|devops"},
+	"https://opentofu.org":                              {"Fork open-source de Terraform maintenu par la communauté suite au changement de licence de HashiCorp", "opentofu|terraform|iac|infrastructure|open-source"},
+	"https://www.jenkins.io":                            {"Serveur d'automatisation open-source pour construire des pipelines CI/CD robustes et extensibles", "jenkins|ci|cd|automation|devops"},
+	"https://woodpecker-ci.org":                         {"Système CI/CD léger open-source basé sur des pipelines Docker définis en YAML", "ci|cd|pipeline|automation|devops"},
+	"https://prometheus.io":                             {"Système de monitoring et d'alerting open-source basé sur des séries temporelles avec requêtes PromQL", "prometheus|monitoring|metrics|alerting|observability"},
+	"https://grafana.com":                               {"Plateforme de visualisation pour créer des dashboards de métriques, logs et traces issus de multiples sources", "grafana|dashboard|visualization|observability|monitoring"},
+	"https://grafana.com/grafana/plugins/grafana-loki-datasource/": {"Plugin datasource Grafana pour interroger et afficher des logs depuis Loki", "grafana|loki|logs|plugin|observability"},
+	"https://keda.sh":                                   {"Autoscaler Kubernetes basé sur des événements pour scaler des workloads selon des métriques externes", "kubernetes|autoscaling|keda|serverless|devops"},
+	"https://longhorn.io":                               {"Système de stockage distribué persistant pour Kubernetes avec réplication et snapshots", "kubernetes|storage|persistent-volume|csi|devops"},
+	"https://www.openfaas.com":                          {"Framework serverless pour déployer des fonctions et microservices sur Kubernetes ou Swarm", "serverless|faas|kubernetes|docker|devops"},
+	"https://caprover.com":                              {"PaaS self-hosted avec interface web pour déployer des apps via Docker avec SSL automatique", "paas|self-hosted|deployment|docker|platform"},
+	"https://runtipi.io":                                {"Gestionnaire d'apps self-hosted simplifié pour déployer des services sur son serveur en quelques clics", "self-hosted|homeserver|docker|apps|platform"},
+	"https://taskfile.dev":                              {"Gestionnaire de tâches moderne en Go avec syntaxe YAML, alternative légère à Make", "task|make|automation|build|cli"},
+	"https://kestra.io":                                 {"Plateforme d'orchestration de workflows déclarative avec interface web et déclencheurs variés", "orchestration|workflow|automation|etl|devops"},
+	"https://healthchecks.io":                           {"Service de surveillance de cron jobs et tâches planifiées par ping HTTP avec alertes", "monitoring|cron|healthcheck|alerting|devops"},
+	"https://meshery.io":                                {"Plateforme de gestion des service meshes et infrastructures cloud-native avec comparatif des solutions", "service-mesh|kubernetes|cloud-native|devops|platform"},
+	"https://github.com":                                {"Forge logicielle collaborative basée sur Git avec CI/CD intégré, issues et pull requests", "git|vcs|collaboration|ci|devops"},
+	"https://about.gitlab.com":                          {"Plateforme DevOps complète intégrant Git, CI/CD, registre de conteneurs et analyse de sécurité", "git|devops|ci|cd|platform"},
+	"https://about.gitea.com":                           {"Forge Git légère et self-hosted avec interface web proche de GitHub", "git|self-hosted|forge|vcs|devops"},
+	"https://gogs.io":                                   {"Service Git self-hosted minimaliste et performant écrit en Go", "git|self-hosted|forge|go|vcs"},
+	"https://claude.ai":                                 {"Assistant IA conversationnel d'Anthropic pour la rédaction, l'analyse de code et le raisonnement complexe", "llm|ai|assistant|anthropic|chatbot"},
+	"https://chat.openai.com":                           {"Assistant IA d'OpenAI pour la conversation, la génération de code et l'analyse de contenu", "llm|ai|assistant|openai|chatbot"},
+	"https://ollama.com":                                {"Outil pour télécharger et exécuter des modèles LLM localement sur sa machine sans cloud", "llm|local|ai|inference|self-hosted"},
+	"https://docs.openwebui.com":                        {"Interface web self-hosted pour interagir avec des modèles LLM locaux (Ollama, OpenAI-compatible)", "llm|webui|self-hosted|ai|interface"},
+	"https://huggingface.co":                            {"Hub communautaire de modèles, datasets et demos pour l'IA et le machine learning", "ml|models|datasets|ai|hub"},
+	"https://floneum.com":                               {"Éditeur visuel pour créer des pipelines IA locaux avec des LLMs open-source sans code", "ai|workflow|local|llm|no-code"},
+	"https://www.promptfoo.dev":                         {"Outil de test et d'évaluation de prompts LLM pour fiabiliser et comparer les sorties des modèles", "llm|testing|evaluation|prompt|ai"},
+	"https://flowiseai.com":                             {"Plateforme low-code pour construire des workflows LLM, chaînes RAG et chatbots personnalisés", "llm|workflow|no-code|chatbot|ai"},
+	"https://www.postgresql.org":                        {"Base de données relationnelle open-source avancée avec support JSON, full-text search et extensions", "postgresql|sql|database|relational|open-source"},
+	"https://www.mongodb.com":                           {"Base de données NoSQL orientée documents avec schéma flexible et scalabilité horizontale", "mongodb|nosql|database|document|json"},
+	"https://redis.io":                                  {"Store de données en mémoire ultra-rapide utilisé comme cache, message broker et base de données", "redis|cache|nosql|in-memory|database"},
+	"https://turso.tech":                                {"Base de données SQLite distribuée à la périphérie (edge) avec faible latence et branchements", "sqlite|edge|database|distributed|sql"},
+	"https://clickhouse.com":                            {"Base de données OLAP columnar pour l'analyse de milliards de lignes en temps réel", "clickhouse|olap|analytics|columnar|sql"},
+	"https://www.pingcap.com/tidb/":                     {"Base de données SQL distribuée compatible MySQL avec scalabilité horizontale et charges HTAP", "tidb|sql|distributed|mysql|database"},
+	"https://dbeaver.io":                                {"Client de base de données universel avec éditeur SQL, explorateur de schémas et visualisation", "dbeaver|database|sql|client|admin"},
+	"https://code.visualstudio.com":                     {"Éditeur de code open-source léger et extensible de Microsoft pour tous les langages de programmation", "vscode|editor|ide|microsoft|coding"},
+	"https://www.lazyvim.org":                           {"Distribution Neovim moderne et préconfigurée avec plugins essentiels pour une expérience IDE", "neovim|vim|editor|ide|terminal"},
+	"https://www.postman.com":                           {"Plateforme collaborative pour tester, documenter et partager des APIs REST et GraphQL", "api|testing|rest|documentation|http"},
+	"https://www.usebruno.com":                          {"Client API open-source et offline-first avec stockage des collections en fichiers texte versionnables", "api|testing|rest|open-source|http"},
+	"https://n8n.io":                                    {"Plateforme d'automatisation de workflows self-hosted avec plus de 400 connecteurs natifs", "automation|workflow|no-code|self-hosted|integration"},
+	"https://www.tooljet.com":                           {"Framework low-code open-source pour créer des outils internes et dashboards business rapidement", "low-code|internal-tools|no-code|ui-builder|open-source"},
+	"https://mermaid.js.org":                            {"Générateur de diagrammes et graphiques depuis du texte Markdown, intégrable partout", "diagrams|markdown|charts|documentation|visualization"},
+	"https://kroki.io":                                  {"API unifiée pour générer des diagrammes depuis de nombreux DSL (PlantUML, Mermaid, D2...)", "diagrams|api|plantuml|mermaid|visualization"},
+	"https://d2lang.com":                                {"Langage de description de diagrammes moderne avec rendu automatique et support de layouts avancés", "diagrams|dsl|visualization|architecture|documentation"},
+	"https://drawdb.vercel.app":                         {"Éditeur visuel de schémas de bases de données en ligne avec export SQL direct", "database|schema|erd|sql|visualization"},
+	"https://devtoys.app":                               {"Boîte à outils desktop pour développeurs avec convertisseurs, encodeurs et formateurs offline", "developer|tools|utilities|encoding|converter"},
+	"https://rendercv.com":                              {"Générateur de CV en YAML/Markdown pour développeurs avec rendu PDF professionnel", "cv|resume|latex|markdown|developer"},
+	"https://www.cert.ssi.gouv.fr":                      {"Centre gouvernemental français de veille, alerte et réponse aux incidents de cybersécurité", "cert|security|france|threat-intel|government"},
+	"https://cisofy.com":                                {"Outil d'audit de sécurité système pour Linux/Unix avec analyse de conformité et recommandations", "audit|linux|security|compliance|hardening"},
+	"https://goss.readthedocs.io":                       {"Outil de validation rapide de la configuration serveur Linux en YAML avec tests parallèles", "testing|infrastructure|validation|linux|devops"},
+	"https://goauthentik.io":                            {"Fournisseur d'identité open-source avec SSO, LDAP, SAML et OAuth2, alternative à Okta", "identity|sso|authentication|iam|oauth"},
+	"https://www.keycloak.org":                          {"Solution IAM open-source de Red Hat pour la gestion des identités, SSO et fédération", "iam|sso|oauth|saml|authentication"},
+	"https://supertokens.com":                           {"Solution d'authentification open-source avec SDK multi-langage, alternative self-hosted à Auth0", "authentication|iam|self-hosted|oauth|sdk"},
+	"https://tailscale.com":                             {"VPN mesh basé sur WireGuard pour connecter facilement des appareils et serveurs en quelques secondes", "vpn|wireguard|mesh|networking|remote-access"},
+	"https://www.twingate.com":                          {"Solution Zero Trust Network Access pour remplacer les VPN d'entreprise traditionnels", "vpn|zero-trust|ztna|networking|security"},
+	"https://ngrok.com":                                 {"Tunnel sécurisé pour exposer un serveur local sur Internet avec une URL publique HTTPS", "tunnel|networking|localhost|webhook|developer"},
+	"https://sablierapp.dev":                            {"Middleware Docker/Kubernetes pour démarrer des conteneurs à la demande et les stopper après inactivité", "docker|on-demand|proxy|automation|container"},
+	"https://trufflesecurity.com":                       {"Scanner de secrets et credentials exposés dans les repos Git, CI et variables d'environnement", "secrets|git|security|scanning|credentials"},
+	"https://gitleaks.io":                               {"Outil de détection de secrets sensibles dans les historiques Git et le code source", "secrets|git|security|scanning|credentials"},
+	"https://github.com/stamparm/maltrail":              {"Système de détection de trafic réseau malveillant basé sur des listes de menaces connues", "network|threat-detection|ids|security|monitoring"},
+	"https://ivre.rocks":                                {"Framework de reconnaissance réseau pour l'analyse passive et active, agrégation de scans OSINT", "network|reconnaissance|osint|security|nmap"},
+	"https://ghidra-sre.org":                            {"Suite de reverse engineering développée par la NSA pour analyser et décompiler du code binaire", "reverse-engineering|malware|binary|nsa|security"},
+	"https://proton.me/business/pass/breach-observatory": {"Outil de surveillance des violations de données pour détecter si des emails ont été compromis", "breach|security|monitoring|privacy|proton"},
+	"https://infisical.com":                             {"Gestionnaire de secrets open-source avec injection automatique dans les pipelines et environnements", "secrets|credentials|self-hosted|devops|security"},
+	"https://www.jumpserver.org":                        {"Bastion SSH open-source pour la gestion des accès privilégiés et l'audit des sessions", "pam|bastion|ssh|audit|privileged-access"},
+	"https://sniffnet.net":                              {"Moniteur de trafic réseau multiplateforme pour visualiser les connexions en temps réel", "network|monitoring|traffic|security|cli"},
+	"https://web-check.xyz":                             {"Outil d'analyse complète d'un site web : DNS, headers HTTP, certificats, technologies détectées", "security|osint|web|analysis|reconnaissance"},
+	"https://www.proxmox.com":                           {"Plateforme de virtualisation open-source basée sur KVM et LXC avec interface web de gestion", "proxmox|virtualization|kvm|lxc|hypervisor"},
+	"https://community-scripts.github.io/ProxmoxVE/":   {"Collection de scripts communautaires pour installer et configurer des services populaires sur Proxmox", "proxmox|scripts|automation|homelab|installation"},
+	"https://xcp-ng.org":                                {"Hyperviseur open-source basé sur XenServer pour la virtualisation d'entreprise avec XO", "hypervisor|xen|virtualization|enterprise|open-source"},
+	"https://www.vmware.com":                            {"Suite de virtualisation et d'infrastructure cloud d'entreprise de Broadcom (vSphere, ESXi)", "virtualization|enterprise|cloud|hypervisor|vmware"},
+	"https://www.nutanix.com":                           {"Plateforme d'infrastructure hyperconvergée pour le cloud hybride et privé en datacenter", "hyperconverged|cloud|infrastructure|enterprise|hci"},
+	"https://www.openstack.org":                         {"Plateforme cloud open-source pour déployer des infrastructures IaaS privées ou hybrides", "cloud|iaas|openstack|private-cloud|infrastructure"},
+	"https://containerd.io":                             {"Runtime de conteneurs conforme OCI, composant bas niveau de Docker et Kubernetes", "container|runtime|oci|kubernetes|docker"},
+	"https://ubuntu.com":                                {"Distribution Linux populaire et documentée basée sur Debian, idéale pour serveurs et desktop", "linux|ubuntu|distro|debian|server"},
+	"https://www.debian.org":                            {"Distribution Linux communautaire stable et sécurisée, base de nombreuses distributions dérivées", "linux|debian|distro|stable|server"},
+	"https://archlinux.org":                             {"Distribution Linux rolling release minimaliste et hautement configurable pour utilisateurs avancés", "linux|arch|rolling-release|minimal|advanced"},
+	"https://cachyos.org":                               {"Distribution Linux basée sur Arch optimisée pour les performances avec scheduler BORE et patches spéciaux", "linux|arch|gaming|performance|desktop"},
+	"https://garudalinux.org":                           {"Distribution Linux axée sur les performances gaming avec thèmes soignés et outils préconfigurés", "linux|gaming|performance|desktop|arch"},
+	"https://nobaraproject.org":                         {"Distribution Linux orientée gaming et création, fork de Fedora par GloriousEggroll avec Proton intégré", "linux|fedora|gaming|desktop|nobara"},
+	"https://openwrt.org":                               {"Firmware Linux open-source pour routeurs et équipements réseau embarqués avec gestion avancée", "openwrt|router|firmware|networking|embedded"},
+	"https://distrosea.com":                             {"Service en ligne pour tester des distributions Linux dans le navigateur sans installation", "linux|distro|testing|online|virtual"},
+	"https://learn.microsoft.com/sysinternals":          {"Suite d'outils Microsoft pour le diagnostic avancé et la gestion du système Windows", "windows|sysadmin|diagnostic|tools|microsoft"},
+	"https://superset.apache.org":                       {"Plateforme BI open-source pour explorer et visualiser des données avec des dashboards interactifs", "bi|dashboard|visualization|analytics|open-source"},
+	"https://www.metabase.com":                          {"Outil de Business Intelligence simple pour créer des rapports et dashboards sans écrire de SQL", "bi|dashboard|analytics|reporting|no-code"},
+	"https://redash.io":                                 {"Outil de requêtes SQL et dashboards pour connecter et visualiser des données de multiples sources", "bi|sql|dashboard|analytics|visualization"},
+	"https://kanaries.net":                              {"Plateforme de data analysis avec exploration visuelle et génération automatique de graphiques", "bi|data-visualization|analytics|no-code|exploration"},
+	"https://getgrist.com":                              {"Tableur-base de données hybride open-source combinant les fonctionnalités d'Excel et d'Airtable", "spreadsheet|database|no-code|self-hosted|data"},
+	"https://thingsboard.io":                            {"Plateforme IoT open-source pour collecter, visualiser et gérer des données de capteurs en temps réel", "iot|data|visualization|platform|open-source"},
+	"https://roadmap.sh":                                {"Feuilles de route communautaires interactives pour apprendre et progresser dans les technologies IT", "learning|roadmap|developer|career|community"},
+	"https://tldr.tech":                                 {"Newsletter tech quotidienne résumant les actualités importantes pour développeurs et ingénieurs", "newsletter|tech|learning|news|developer"},
+	"https://kodekloud.com":                             {"Plateforme de formation interactive pour apprendre DevOps, Kubernetes et les technologies cloud", "learning|devops|kubernetes|training|hands-on"},
+	"https://landscape.cncf.io":                         {"Cartographie exhaustive des outils et projets de l'écosystème cloud-native open-source", "cloud-native|cncf|landscape|kubernetes|reference"},
+	"https://www.cncf.io":                               {"Organisation open-source hébergeant Kubernetes et les projets cloud-native phares de l'industrie", "cloud-native|cncf|kubernetes|open-source|foundation"},
+	"https://www.onlyoffice.com":                        {"Suite bureautique open-source compatible Microsoft Office avec collaboration en temps réel", "office|documents|collaboration|open-source|self-hosted"},
+	"https://apps.kde.org":                              {"Catalogue officiel des applications open-source de l'environnement de bureau KDE pour Linux", "kde|linux|desktop|apps|open-source"},
+	"https://www.naps2.com":                             {"Logiciel de numérisation simple et gratuit pour Windows avec export PDF, OCR et envoi email", "scanning|pdf|windows|documents|utilities"},
+	"https://rustdesk.com":                              {"Alternative open-source à TeamViewer pour le bureau à distance avec serveur self-hosted", "remote-desktop|self-hosted|open-source|vnc|rdp"},
+	"https://www.kasmweb.com":                           {"Plateforme de streaming de postes de travail et navigateurs dans des conteneurs Docker sécurisés", "remote-desktop|containers|streaming|browser|security"},
+	"https://www.ventoy.net":                            {"Outil pour créer des clés USB multiboot supportant des dizaines d'ISOs simultanément", "bootable-usb|multiboot|iso|linux|utilities"},
+	"https://usebottles.com":                            {"Gestionnaire d'environnements Wine pour exécuter des applications Windows sous Linux facilement", "wine|windows|linux|compatibility|gaming"},
+	"https://gethomepage.dev":                           {"Dashboard de page d'accueil configurable en YAML pour centraliser les liens vers ses services", "dashboard|homepage|self-hosted|homelab|links"},
+	"https://cockpit-project.org":                       {"Interface web d'administration de serveur Linux pour surveiller, gérer services et terminaux", "linux|server|admin|web-interface|monitoring"},
+	"https://www.stirlingpdf.com":                       {"Suite PDF self-hosted pour compresser, fusionner, diviser, convertir et annoter des fichiers", "pdf|self-hosted|utilities|documents|convert"},
+	"https://cobalt.tools":                              {"Téléchargeur de médias propre depuis YouTube, Twitter, Instagram et autres plateformes", "download|media|youtube|video|utilities"},
+	"https://actualbudget.org":                          {"Application de gestion budgétaire local-first avec synchronisation optionnelle et enveloppes", "budget|finance|personal-finance|self-hosted|open-source"},
+	"https://documenso.com":                             {"Alternative open-source à DocuSign pour la signature électronique de documents légaux", "signature|documents|open-source|self-hosted|pdf"},
+	"https://twenty.com":                                {"CRM open-source moderne auto-hébergeable avec interface Notion-like et API GraphQL", "crm|open-source|sales|self-hosted|productivity"},
+	"https://planka.app":                                {"Gestionnaire de projets Kanban open-source, alternative self-hosted à Trello", "kanban|project-management|trello|open-source|self-hosted"},
+	"https://affine.pro":                                {"Espace de travail tout-en-un combinant notes Markdown, base de données et tableau blanc interactif", "notes|wiki|whiteboard|productivity|open-source"},
+	"https://huly.io":                                   {"Plateforme tout-en-un de gestion de projet intégrant Kanban, sprints, issues et messagerie", "project-management|agile|kanban|sprint|self-hosted"},
+	"https://snipeitapp.com":                            {"Logiciel ITAM open-source pour la gestion des actifs IT, licences et affectations utilisateurs", "itam|asset-management|it|open-source|self-hosted"},
+	"https://www.odoo.com":                              {"Suite ERP open-source modulaire couvrant CRM, comptabilité, RH, inventaire et e-commerce", "erp|crm|open-source|business|self-hosted"},
+	"https://solidtime.io":                              {"Outil de suivi du temps open-source avec interface épurée, rapports et intégration projets", "time-tracking|productivity|open-source|self-hosted|freelance"},
+	"https://github.com/iptv-org/iptv":                  {"Collection de flux IPTV publics et gratuits organisés par pays, langue et catégorie en M3U", "iptv|streaming|media|playlist|m3u"},
+	"https://ratatui.rs":                                {"Bibliothèque Rust pour créer des interfaces utilisateur TUI riches dans le terminal", "tui|rust|cli|terminal|library"},
+	"https://grafana.com/oss/loki/":                     {"Système d'agrégation de logs horizontalement scalable conçu pour fonctionner avec Grafana et Prometheus", "logs|monitoring|grafana|observability|devops"},
+	"https://dockhand.pro":                              {"Dashboard de gestion de conteneurs Docker avec interface web, statistiques et alertes", "docker|management|dashboard|containers|self-hosted"},
+	"https://github.com/hhftechnology/Dock-Dploy":       {"Outil de déploiement simplifié pour conteneurs Docker depuis une interface web minimale", "docker|deployment|self-hosted|containers|platform"},
+	"https://github.com/tidwall/pogocache":              {"Serveur cache hautes performances compatible Redis et Memcached écrit en Go", "cache|redis|memcached|go|performance"},
+	"https://github.com/usestrix/strix":                 {"Framework low-code pour créer des applications internes avec des blocs de construction réutilisables", "low-code|internal-tools|ui-builder|no-code|open-source"},
+	"https://github.com/eclipse-sprotty/sprotty":       {"Framework web TypeScript pour créer des diagrammes interactifs et éditables dans le navigateur", "diagrams|web|typescript|visualization|framework"},
+	"https://github.com/longbridge/gpui-component":      {"Bibliothèque de composants UI pour GPUI, le framework de rendu GPU du terminal Zed", "ui|rust|components|gpui|desktop"},
+	"https://github.com/DDULDDUCK/pingora-proxy-manager": {"Interface web pour configurer et gérer un reverse proxy basé sur Pingora de Cloudflare", "proxy|reverse-proxy|cloudflare|pingora|networking"},
+	"https://github.com/PhonePe/mantis":                 {"Outil de gestion de la surface d'attaque et d'OSINT développé en interne par PhonePe", "osint|attack-surface|security|recon|asset-management"},
+	"https://github.com/TibixDev/winboat":               {"Launcher Windows portable pour Linux facilitant l'exécution d'applications via Wine/Proton", "windows|wine|linux|gaming|compatibility"},
+	"https://github.com/suitenumerique/docs":            {"Éditeur de documents collaboratif de la Suite Numérique du gouvernement français", "documents|collaboration|france|government|open-source"},
+	"https://github.com/davidtorcivia/emby-wrapped-ftp": {"Générateur de statistiques annuelles façon Spotify Wrapped pour serveur Emby", "emby|media|stats|wrapped|homelab"},
+	"https://github.com/rustfs/rustfs":                  {"Système de fichiers distribué compatible S3 écrit en Rust pour le stockage objet", "storage|s3|distributed|rust|object-storage"},
+	"https://github.com/kavishdevar/librepods":          {"Application Android pour débloquer toutes les fonctionnalités des AirPods Apple (gestes, bruit...)", "android|airpods|bluetooth|open-source|audio"},
+	"https://github.com/simstudioai/sim":                {"Environnement visuel pour simuler, tester et déboguer des workflows d'agents IA", "ai|simulation|agents|debugging|workflow"},
+	"https://github.com/OpenAEV-Platform/openaev":       {"Plateforme open-source d'évaluation automatisée des vulnérabilités avec rapports détaillés", "security|vulnerability|audit|assessment|open-source"},
+	"https://github.com/octelium/octelium":              {"Solution Zero Trust d'accès réseau avec gestion centralisée des politiques et identités", "zero-trust|networking|iam|security|access"},
+	"https://github.com/harshit181/RSSPub":              {"Convertisseur de pages web en flux RSS pour suivre n'importe quel site sans abonnement", "rss|feed|aggregator|web|utilities"},
+	"https://github.com/RackulaLives/Rackula":           {"Outil de visualisation et gestion de l'inventaire de racks serveurs en datacenter", "rack|datacenter|infrastructure|visualization|management"},
+	"https://astro.build":                               {"Framework web statique avec architecture en îles pour des sites ultra-rapides et partiellement hydratés", "astro|framework|static-site|web|performance"},
+	"https://airflow.apache.org":                        {"Plateforme d'orchestration de workflows de données open-source avec DAGs en Python", "workflow|orchestration|etl|data|python"},
+	"https://openfeature.dev":                           {"Standard ouvert pour la gestion de feature flags compatible avec tous les providers", "feature-flags|open-standard|sdk|devops|experimentation"},
+	"https://gofeatureflag.org":                         {"Solution légère de feature flags self-hosted avec fichier de configuration simple et SDK multi-langages", "feature-flags|self-hosted|go|devops|experimentation"},
+	"https://dokploy.com":                               {"PaaS open-source pour déployer facilement applications et bases de données sur VPS avec SSL auto", "paas|self-hosted|deployment|docker|platform"},
+	"https://kanvas.new":                                {"Outil collaboratif en ligne pour créer des diagrammes d'architecture cloud de façon intuitive", "diagrams|cloud|architecture|collaboration|visualization"},
+	"https://scanopy.net":                               {"Scanner de vulnérabilités web pour auditer la sécurité d'applications et d'APIs REST", "security|vulnerability|scanner|web|api"},
+	"https://hadoop.apache.org":                         {"Framework de traitement distribué de grands volumes de données sur clusters avec MapReduce", "hadoop|big-data|distributed|mapreduce|data"},
+	"https://spark.apache.org":                          {"Moteur de traitement de données distribué ultra-rapide pour analytics, streaming et machine learning", "spark|big-data|distributed|analytics|streaming"},
+	"https://pulsar.apache.org":                         {"Système de messagerie et streaming distribué multi-tenant cloud-native avec géo-réplication", "messaging|streaming|pubsub|distributed|cloud-native"},
+	"https://guacamole.apache.org":                      {"Passerelle de bureau à distance sans client basée sur HTML5, accessible depuis n'importe quel navigateur", "remote-desktop|html5|gateway|vnc|rdp"},
+	"https://github.com/VSCodium/vscodium":              {"Build communautaire de VS Code open-source sans télémétrie ni tracking Microsoft", "vscode|editor|ide|open-source|privacy"},
+	"https://github.com/Haxxnet/Compose-Examples":       {"Collection de fichiers docker-compose prêts à l'emploi pour des dizaines de services populaires", "docker|compose|examples|self-hosted|homelab"},
+	"https://awesome-docker-compose.com/apps":           {"Répertoire d'applications avec templates docker-compose pour déployer rapidement des services", "docker|compose|templates|self-hosted|homelab"},
+	"https://compose.ajnart.dev/templates":              {"Catalogue de templates docker-compose avec interface de recherche et copie en un clic", "docker|compose|templates|self-hosted|homelab"},
+	"https://github.com/getwud/wud":                     {"Outil de surveillance des mises à jour d'images Docker avec notifications multi-canaux", "docker|updates|monitoring|automation|homelab"},
+	"https://github.com/dockur/windows":                 {"Image Docker pour exécuter Windows 10/11 dans un conteneur sur Linux via KVM", "docker|windows|virtualization|kvm|containers"},
+	"https://github.com/dalibo/pg_activity":             {"Outil top-like interactif pour surveiller l'activité en temps réel d'une base PostgreSQL", "postgresql|monitoring|database|admin|cli"},
+	"https://github.com/Fission-AI/OpenSpec":            {"Générateur de spécifications API OpenAPI assisté par IA depuis du code existant", "api|openapi|specification|ai|documentation"},
+	"https://github.com/ghostty-org/ghostty":            {"Émulateur de terminal rapide et feature-rich avec rendu GPU natif, créé par Mitchell Hashimoto", "terminal|emulator|gpu|performance|developer"},
+	"https://github.com/TheHive-Project/Docker-Templates": {"Templates Docker officiels pour déployer TheHive, Cortex et Hippocampe (SIRP/SOAR)", "docker|incident-response|security|thehive|siem"},
+	"https://github.com/projectdiscovery/cvemap":        {"Outil CLI pour naviguer dans la base CVE et filtrer les vulnérabilités par sévérité ou vendor", "cve|security|vulnerability|cli|osint"},
+	"https://github.com/PatchMon/PatchMon":              {"Moniteur de correctifs de sécurité pour suivre les CVEs affectant ses systèmes en production", "security|patching|cve|monitoring|vulnerability"},
+	"https://github.com/trufflesecurity/trufflehog":     {"Scanner de secrets exposés dans les repos Git (doublon — voir trufflesecurity.com)", "secrets|git|security|scanning|credentials"},
+	"https://github.com/frappe/erpnext":                 {"ERP open-source complet basé sur Frappe Framework pour la comptabilité, RH et logistique", "erp|open-source|business|frappe|self-hosted"},
+	"https://www.bentopdf.com":                          {"Suite d'outils PDF en ligne pour éditer, compresser, fusionner et convertir des fichiers", "pdf|tools|online|utilities|converter"},
+	"https://github.com/unum-cloud":                     {"Écosystème de bibliothèques hautes performances pour la recherche vectorielle et le traitement de données", "data|performance|library|vector-search|open-source"},
+	"https://github.com/nextgraph-org":                  {"Protocole décentralisé pour des applications locales-first, collaboratives et chiffrées de bout en bout", "decentralized|local-first|collaboration|p2p|protocol"},
+	"https://github.com/stan-smith/FossFLOW":            {"Outil de diagrammes de flux open-source pour documenter des processus métier et techniques", "diagrams|workflow|flowchart|documentation|open-source"},
+	"https://aspizu.github.io/nixite":                   {"Générateur de sites statiques basé sur Nix pour des builds reproductibles et déclaratifs", "nix|static-site|generator|reproducible|build"},
+	"https://sre.google":                                {"Ressources officielles Google sur les pratiques Site Reliability Engineering, livres et guides", "sre|devops|learning|google|reliability"},
+	"https://www.remotion.dev":                          {"Framework React pour créer des vidéos programmatiquement avec TypeScript et composants réutilisables", "video|react|programmatic|typescript|framework"},
+	"https://go.dev":                                    {"Langage de programmation open-source de Google orienté systèmes distribués, concurrence et performance", "go|golang|language|google|performance"},
+	"https://www.rust-lang.org":                         {"Langage de programmation système performant et sûr en mémoire sans garbage collector", "rust|language|systems|performance|memory-safe"},
+	"https://learn.microsoft.com/en-us/powershell/":     {"Shell et langage de script cross-platform de Microsoft pour l'automatisation des tâches système", "powershell|scripting|automation|windows|microsoft"},
+	"https://www.gnu.org/software/bash/":                {"Shell Unix standard et langage de script largement utilisé pour l'automatisation des tâches système", "bash|shell|scripting|linux|automation"},
+	"https://opencode.ai":                               {"Agent de développement IA en terminal pour générer, modifier et expliquer du code interactivement", "ai|coding-assistant|terminal|llm|developer"},
+	"https://openclaw.ai":                               {"Plateforme d'automatisation d'agents IA pour orchestrer des workflows complexes multi-étapes", "ai|agents|automation|workflow|llm"},
+	"https://docs.bmad-method.org":                      {"Méthode Agile de développement logiciel assistée par agents IA pour structurer des projets complets", "ai|methodology|agents|development|framework"},
+	"https://www.warp.dev":                              {"Terminal nouvelle génération avec IA intégrée, blocs de commandes réutilisables et collaboration", "terminal|ai|collaboration|developer|productivity"},
+	"https://linuxcontainers.org/incus-os/introduction/": {"Système d'exploitation immuable basé sur Alpine Linux conçu pour héberger des instances LXC/Incus", "linux|lxc|incus|immutable-os|containers"},
+	"https://lasuite.numerique.gouv.fr":                 {"Suite d'outils numériques souverains du gouvernement français pour les agents et collectivités", "france|government|sovereign|collaboration|productivity"},
+	"https://maester.dev":                               {"Framework de tests PowerShell pour valider la conformité et la sécurité des environnements Microsoft 365", "powershell|testing|microsoft365|compliance|azure"},
+	"https://docs.terrakube.io":                         {"Alternative open-source à Terraform Enterprise avec gestion de workspaces, modules et CI/CD", "terraform|iac|self-hosted|enterprise|open-source"},
+	"https://quickwit.io":                               {"Moteur de recherche distribué cloud-native sur stockage objet S3, optimisé pour les logs à grande échelle", "search|logs|distributed|s3|observability"},
+	"https://skillsmp.com":                              {"Marketplace de compétences et agents MCP pour enrichir et étendre les capacités des assistants IA", "mcp|agents|ai|marketplace|skills"},
+	"https://superwhisper.com":                          {"Application de transcription vocale en temps réel basée sur Whisper pour macOS avec raccourcis globaux", "speech-to-text|whisper|macos|transcription|ai"},
+	"https://github.com/ysharma3501/LuxTTS":             {"Moteur de synthèse vocale local hautes performances avec voix naturelles", "tts|speech|local|ai|voice"},
+	"https://ace-step.github.io":                        {"Modèle génératif de musique step-by-step capable de créer des compositions complètes", "music|generative-ai|audio|model|creative"},
+	"https://rivet.ironcladapp.com":                     {"IDE visuel pour créer et déboguer des pipelines d'agents IA avec nœuds graphiques connectables", "ai|agents|visual-ide|workflow|llm"},
+	"https://github.com/Shelpuk-AI-Technology-Consulting/kindly-web-search-mcp-server": {"Serveur MCP permettant aux agents IA d'effectuer des recherches web en temps réel", "mcp|web-search|ai|agent|tool"},
+	"https://github.com/techenthusiast167/Master-OSINT-Toolkit-": {"Collection d'outils OSINT pour la reconnaissance numérique, l'investigation et la collecte d'informations", "osint|reconnaissance|security|toolkit|investigation"},
+	"https://datus.ai":                                  {"Plateforme d'ingénierie de données propulsée par des agents IA pour transformer et analyser des données", "data-engineering|ai|agents|etl|analytics"},
+	"https://librepcb.org":                              {"Logiciel de conception de circuits imprimés (PCB) open-source multiplateforme avec gestion de bibliothèques", "pcb|eda|hardware|electronics|open-source"},
+	"https://bamqam.com":                                {"Carte collaborative pour suivre et visualiser des opérations militaires et conflits en temps réel", "maps|military|tracking|visualization|experimental"},
+	"https://blog.stephane-robert.info/docs/":           {"Documentation et tutoriels DevOps en français par Stéphane Robert : Docker, Kubernetes, Ansible...", "devops|learning|french|tutorials|documentation"},
+	"https://trendshift.io":                             {"Outil de suivi des dépôts GitHub tendances avec classement historique et filtres par langage", "github|trending|analytics|open-source|tracking"},
+	"https://boot.dev":                                  {"Plateforme gamifiée pour apprendre le développement backend en Go et Python par la pratique", "learning|backend|go|python|gamified"},
+	"https://xyops.io":                                  {"Plateforme DevOps intégrée pour les équipes engineering avec CI/CD, IaC et observabilité", "devops|cicd|platform|engineering|automation"},
+	"https://www.kubetail.com":                          {"Interface web pour suivre les logs de plusieurs pods Kubernetes simultanément avec filtrage", "kubernetes|logs|monitoring|tail|devops"},
+	"https://traefik-manager.xyzlab.dev":                {"Interface web pour configurer et gérer un reverse proxy Traefik via une UI graphique", "traefik|proxy|reverse-proxy|web-ui|networking"},
+	"https://caddymanager.online":                       {"Interface graphique pour configurer et gérer le serveur web et reverse proxy Caddy", "caddy|web-server|proxy|management|ui"},
+	"https://pgmodeler.io":                              {"Outil de modélisation graphique de bases de données PostgreSQL avec génération DDL et migration", "postgresql|modeling|erd|database|design"},
+	"https://tryspeaktype.com":                          {"Outil de dictée vocale IA pour convertir rapidement la parole en texte dans n'importe quelle app", "speech-to-text|dictation|ai|productivity|voice"},
+	"https://github.com/hehehai/voxt":                   {"Application de transcription vocale et dictée alimentée par Whisper avec interface minimaliste", "speech-to-text|whisper|ai|voice|transcription"},
+	"https://github.com/BingoWon/apple-rag-mcp":        {"Serveur MCP pour effectuer des recherches RAG dans la documentation officielle Apple", "mcp|rag|apple|documentation|ai"},
+	"https://github.com/samber/cc-skills-golang":        {"Collection de skills Claude Code pour accélérer le développement en Go", "mcp|claude|golang|skills|developer"},
+	"https://github.com/CoderLuii/HolyClaude":           {"Configuration avancée de Claude Code avec workflows, hooks et prompts système optimisés", "claude|ai|configuration|developer|workflow"},
+	"https://github.com/yctimlin/mcp_excalidraw":        {"Serveur MCP pour créer et modifier des diagrammes Excalidraw via des agents IA", "mcp|excalidraw|diagrams|ai|agent"},
+	"https://github.com/HKUDS/OpenHarness":              {"Framework d'évaluation et de benchmarking standardisé pour les agents IA", "ai|benchmark|evaluation|agents|research"},
+	"https://tailadmin.com":                             {"Template de dashboard admin open-source basé sur Tailwind CSS avec composants réutilisables", "dashboard|tailwind|admin|template|ui"},
+	"https://folderhost.org":                            {"Service pour héberger et partager des dossiers de fichiers en ligne avec liens directs", "hosting|files|sharing|storage|utilities"},
+	"https://rclone.org":                                {"Outil CLI pour synchroniser et gérer des fichiers vers plus de 40 services cloud (S3, GDrive...)", "sync|cloud|storage|cli|backup"},
+	"https://github.com/nikoksr/notify":                 {"Bibliothèque Go pour envoyer des notifications via Slack, Telegram, Discord, email et plus", "notifications|go|library|messaging|alerts"},
+	"https://fccview.github.io/degoog/":                 {"Collection d'alternatives open-source aux produits Google pour réduire la dépendance au géant du web", "privacy|google|alternatives|open-source|degoogling"},
+	"https://atuin.sh":                                  {"Remplacement de l'historique shell avec synchronisation chiffrée entre machines et recherche avancée", "shell|history|sync|cli|terminal"},
+	"https://github.com/pashov/ai-web3-security":        {"Ressources et outils de sécurité pour l'audit de contrats intelligents et protocoles Web3/DeFi", "web3|security|blockchain|audit|smart-contracts"},
+	"https://adguard.com/adguard-home.html":             {"Bloqueur de publicités et trackers DNS pour tout le réseau domestique, alternative à Pi-hole", "dns|adblock|privacy|networking|self-hosted"},
+	"https://netmaker.io":                               {"Plateforme de réseau virtuel WireGuard automatisé pour créer des VPNs mesh multi-sites", "wireguard|vpn|mesh|networking|self-hosted"},
+	"https://lab-ca.net":                                {"Autorité de certification interne self-hosted basée sur ACME pour les environnements de lab et dev", "pki|certificate|ca|acme|self-hosted"},
+	"https://frenchbreaches.com":                        {"Base de données de violations de données françaises pour vérifier si ses identifiants ont fuité", "breach|security|france|data-leak|threat-intel"},
+	"https://github.com/Z4nzu/hackingtool":              {"Menu unifié regroupant des dizaines d'outils de hacking éthique et pentest pour Linux", "pentest|hacking|tools|kali|security"},
+	"https://github.com/beelzebub-labs/beelzebub":       {"Honeypot avancé basé sur l'IA pour détecter et analyser les intrusions sur les services exposés", "honeypot|security|ai|detection|threat"},
+	"https://github.com/seekr-osint/seekr":              {"Outil OSINT pour la recherche d'informations sur des personnes ou organisations avec interface web", "osint|reconnaissance|investigation|security|privacy"},
+	"https://socprime.com/detectflow/":                  {"Plateforme collaborative de threat intelligence avec règles de détection SIEM/XDR partagées", "siem|threat-detection|rules|detection|soc"},
+	"https://www.ranagmbh.de/netfluss/":                 {"Outil de visualisation et analyse des flux réseau pour comprendre le trafic en détail", "network|flow|visualization|monitoring|security"},
+	"https://getsparkle.net":                            {"Outil de compatibilité Windows pour macOS/Linux simplifiant la gestion des préfixes Wine", "wine|windows|compatibility|macos|gaming"},
+	"https://urbanity.readthedocs.io/en/latest/":        {"Bibliothèque Python pour analyser et visualiser des données urbaines géospatiales et OpenStreetMap", "geospatial|urban|python|data|analytics"},
+	"https://github.com/windingwind/zotero-better-notes": {"Plugin Zotero enrichissant la prise de notes bibliographiques avec templates et liens bidirectionnels", "zotero|notes|research|plugin|academic"},
+	"https://github.com/Akylas/OSS-DocumentScanner":     {"Application Android open-source pour scanner des documents avec détection de bords et OCR", "android|scanner|ocr|documents|open-source"},
+	"https://github.com/Pouzor/homelable":               {"Dashboard de gestion de homelab avec inventaire des services, statuts et monitoring", "homelab|dashboard|inventory|monitoring|self-hosted"},
+	"https://getgreenshot.org":                          {"Outil de capture d'écran léger pour Windows avec annotations, flèches et export direct", "screenshot|windows|annotation|capture|utilities"},
+	"https://getsharex.com":                             {"Application open-source de capture d'écran et d'enregistrement vidéo avancée pour Windows", "screenshot|windows|recording|capture|open-source"},
+	"https://flameshot.org":                             {"Outil de capture d'écran multiplateforme avec annotations en temps réel et personnalisation poussée", "screenshot|cross-platform|annotation|capture|open-source"},
+	"https://github.com/delftopenhardware/awesome-open-hardware": {"Liste curatée de projets hardware open-source, outils et ressources pour l'électronique", "hardware|open-source|electronics|list|awesome"},
+	"https://github.com/LNH-team/dspico-hardware":       {"Projet hardware open-source de contrôleur multi-usage basé sur le microcontrôleur RP2040", "rp2040|pico|hardware|controller|electronics"},
+	"https://github.com/igorlira/dirplayer-rs":          {"Lecteur de fichiers Macromedia Director (.dcr/.dir) réécrit en Rust pour la préservation numérique", "retrocomputing|director|flash|rust|legacy"},
+	"https://github.com/xdpirate/calorific":             {"Application mobile de suivi des calories et de la nutrition avec journal alimentaire", "health|calories|tracking|nutrition|mobile"},
+	"https://github.com/asifali411/OpenSignal":          {"Application de mesure de la qualité du signal mobile, WiFi et réseau avec cartographie", "network|signal|mobile|measurement|utilities"},
+	"https://github.com/Xpirix/qgis-osint":              {"Plugin QGIS pour intégrer des sources OSINT dans les analyses cartographiques et géospatiales", "qgis|osint|geospatial|mapping|security"},
+	"https://opensnap.tech":                             {"Outil de snapshot et de restauration rapide d'environnements de développement et de production", "snapshot|deployment|environment|devops|open-source"},
+	"https://github.com/manonstreet/FindMySyncPlus":     {"Extension de l'application Localiser d'Apple pour synchroniser davantage d'appareils tiers", "apple|findmy|sync|android|bluetooth"},
+	"https://github.com/catppuccin/atuin":               {"Thème Catppuccin pour le gestionnaire d'historique shell Atuin avec palette pastel", "catppuccin|theme|atuin|shell|customization"},
+	"https://github.com/cpp-for-yourself/lectures-and-homeworks": {"Cours complet de C++ moderne avec vidéos, exercices et homeworks pour débutants et intermédiaires", "cpp|learning|course|programming|tutorial"},
+	"https://madhuakula.com/kubernetes-goat":            {"Environnement Kubernetes intentionnellement vulnérable pour apprendre la sécurité des clusters", "kubernetes|security|learning|ctf|vulnerable"},
+	"https://github.com/leandromoreira/cdn-up-and-running": {"Guide pratique pour construire et comprendre un CDN de zéro avec exemples concrets", "cdn|learning|networking|tutorial|open-source"},
+	"https://flux9s.ca":                                 {"Outil de déploiement GitOps léger pour Kubernetes inspiré de Flux, orienté simplicité", "gitops|kubernetes|deployment|flux|devops"},
+	"https://github.com/yonahd/kor":                     {"Outil CLI pour identifier et nettoyer les ressources Kubernetes inutilisées dans un cluster", "kubernetes|optimization|cleanup|cli|devops"},
+	"https://signoz.io":                                 {"Plateforme APM et observabilité open-source alternative à Datadog, basée sur OpenTelemetry", "monitoring|apm|observability|opentelemetry|open-source"},
+	"https://github.com/gma1k/podtrace":                 {"Outil de traçage des appels réseau et syscalls dans les pods Kubernetes pour le débogage", "kubernetes|tracing|debugging|network|devops"},
+	"https://pigsty.io":                                 {"Distribution PostgreSQL self-hosted avec monitoring Grafana, HA patroni et déploiement simplifié", "postgresql|distribution|ha|monitoring|self-hosted"},
+	"https://open-sandbox.ai":                           {"Plateforme de sandbox isolée pour tester et évaluer des modèles IA en toute sécurité", "ai|sandbox|testing|models|evaluation"},
+	"https://github.com/HKUDS/FastCode":                 {"Agent IA de génération et d'optimisation de code à grande vitesse pour plusieurs langages", "ai|coding-assistant|code-generation|agent|llm"},
+	"https://www.rtk-ai.app":                            {"Assistant IA pour le développement mobile React Native avec génération de composants et débogage", "ai|react-native|mobile|coding-assistant|llm"},
+	"https://sms-gate.app":                              {"Application pour utiliser son téléphone Android comme passerelle SMS via une API REST locale", "sms|api|android|gateway|messaging"},
+	"https://verilator.org":                             {"Compilateur et simulateur open-source pour Verilog et SystemVerilog pour la conception FPGA", "verilog|hdl|simulation|fpga|electronics"},
+	"https://github.com/burhanr13/Tanuki3DS":            {"Émulateur Nintendo 3DS en développement actif écrit en C avec support cross-platform", "emulator|3ds|nintendo|gaming|retrocomputing"},
+	"https://github.com/VoltAgent/awesome-design-md":    {"Collection de ressources et templates DESIGN.md pour documenter l'architecture et les choix techniques", "documentation|design|architecture|templates|awesome"},
+	// Batch ajout avril 2026
+	"https://codeberg.org":                              {"Forge Git libre et éthique hébergée par la Codeberg e.V., alternative open-source à GitHub", "git|hosting|open-source|forge|self-hosted"},
+	"https://forgejo.org":                               {"Fork communautaire de Gitea pour une forge Git 100% auto-hébergeable sans dépendance commerciale", "git|self-hosted|forge|open-source|gitea"},
+	"https://github.com/CodesWhat/drydock":              {"Outil de surveillance des mises à jour de conteneurs Docker qui détecte les nouvelles versions d'images sur 23 registries", "docker|containers|updates|monitoring|devops"},
+	"https://karmada.io":                                {"Système de gestion multi-cluster Kubernetes permettant de déployer et orchestrer des workloads sur plusieurs clusters", "kubernetes|multi-cluster|orchestration|devops|cloud-native"},
+	"https://github.com/awslabs/ai-on-eks":              {"Blueprints et patterns de référence pour déployer des workloads IA/ML sur Amazon EKS avec les meilleures pratiques AWS", "aws|eks|kubernetes|mlops|ai"},
+	"https://github.com/databricks/terraform-databricks-sra": {"Architecture de référence sécurisée Terraform pour déployer Databricks en conformité avec les standards enterprise", "terraform|databricks|iac|security|aws"},
+	"https://schemahero.io":                             {"Opérateur Kubernetes pour gérer les schémas de bases de données de façon déclarative via des ressources YAML versionnées", "kubernetes|database|schema|migration|operator"},
+	"https://github.com/xiaguan/pegainfer":              {"Moteur d'inférence LLM ultra-léger écrit en Rust et CUDA sans PyTorch ni framework externe", "llm|inference|rust|cuda|performance"},
+	"https://github.com/kyutai-labs/pocket-tts":         {"Application TTS légère de Kyutai conçue pour fonctionner efficacement sur CPU sans GPU ni API cloud", "tts|speech|cpu|local|lightweight"},
+	"https://github.com/hustcc/mcp-mermaid":             {"Serveur MCP qui génère dynamiquement des diagrammes Mermaid à partir de descriptions en langage naturel", "mcp|mermaid|diagrams|ai|visualization"},
+	"https://github.com/nicobailon/visual-explainer":    {"Skill pour agents IA qui convertit des sorties terminal complexes en pages HTML visuelles et interactives", "agent|skill|visualization|html|claude-code"},
+	"https://github.com/gusye1234/nano-graphrag":        {"Implémentation minimaliste et hackable de GraphRAG pour construire des systèmes RAG basés sur des graphes de connaissances", "rag|graph|llm|knowledge-graph|python"},
+	"https://lightpanda.io":                             {"Navigateur headless ultra-rapide conçu pour les agents IA et l'automatisation web, 16x moins gourmand en mémoire que Chrome", "headless-browser|automation|ai-agents|web-scraping|performance"},
+	"https://github.com/JuliusBrussee/caveman":          {"Skill Claude Code qui réduit les tokens de ~65% en générant des réponses ultra-concises sans perte de précision technique", "claude-code|skill|tokens|optimization|agent"},
+	"https://github.com/BloopAI/vibe-kanban":            {"Tableau kanban conçu pour planifier et exécuter des tâches avec des agents de coding IA dans des workspaces isolés", "kanban|ai-agents|planning|coding|productivity"},
+	"https://github.com/truecourse-ai/truecourse":       {"Plateforme d'analyse de code alimentée par l'IA pour détecter violations architecturales, dette technique et problèmes de sécurité", "ai|code-analysis|architecture|security|static-analysis"},
+	"https://github.com/VoltAgent/awesome-agent-skills": {"Collection curatée de 1000+ skills pour agents IA compatibles Claude Code, Codex, Gemini CLI et Cursor", "agent|skills|claude-code|awesome|ai"},
+	"https://github.com/stephenleo/bmad-autonomous-development": {"Orchestrateur multi-agents qui automatise l'exécution complète d'un sprint de développement en parallèle", "ai|agents|autonomous|development|bmad"},
+	"https://smythos.com":                               {"Constructeur visuel drag-and-drop d'agents IA open-source deployables en local, cloud ou edge avec gouvernance intégrée", "ai-agents|no-code|visual|workflow|deployment"},
+	"https://github.com/patrickchugh/terravision":       {"Génère automatiquement des diagrammes d'architecture cloud professionnels à partir de code Terraform", "terraform|iac|diagrams|cloud|architecture"},
+	"https://erd-editor.io":                             {"Éditeur de diagrammes entité-relation en navigateur et VS Code avec collaboration temps réel et chiffrement de bout en bout", "erd|database|diagrams|collaboration|vscode"},
+	"https://github.com/ParthJadhav/Rust_Search":        {"Bibliothèque Rust haute performance pour la recherche de fichiers avec filtrage par extension, taille et date", "rust|search|files|library|performance"},
+	"https://github.com/librespeed/speedtest-rust":      {"Serveur de test de débit réseau auto-hébergé et open-source réécrit en Rust pour de meilleures performances", "speedtest|network|rust|self-hosted|performance"},
+	"https://steampipe.io":                              {"Outil SQL pour interroger en temps réel les APIs cloud (AWS, Azure, GCP) comme des bases de données relationnelles", "sql|cloud|aws|azure|devops"},
+	"https://github.com/microsoft/markitdown":           {"Utilitaire Microsoft pour convertir des fichiers Office, PDF et HTML en Markdown exploitable par les LLMs", "markdown|conversion|pdf|office|llm"},
+	"https://github.com/Dwarf1er/openlabel":             {"Bibliothèque C# pour simplifier l'impression, la mise à l'échelle et le templating d'étiquettes ZPL sur imprimantes Zebra", "zebra|zpl|printing|labels|csharp"},
+	"https://certbot.eff.org":                           {"Client ACME de l'EFF pour obtenir et renouveler automatiquement des certificats TLS Let's Encrypt sur n'importe quel serveur", "ssl|tls|letsencrypt|acme|certificates"},
+	"https://github.com/nginx/nginx-acme":               {"Module NGINX natif implémentant le protocole ACMEv2 pour gérer automatiquement les certificats TLS sans outil externe", "nginx|acme|ssl|tls|certificates"},
+	"https://www.opencve.io":                            {"Plateforme de surveillance CVE open-source avec alertes configurables par vendor/produit et intégration MITRE/NVD", "cve|security|vulnerability|monitoring|threat-intel"},
+	"https://github.com/veops/oneterm":                  {"Hôte bastion d'entreprise léger et open-source avec authentification, autorisation, audit et enregistrement de sessions", "bastion|jump-server|pam|audit|security"},
+	"https://github.com/ShivamXD6/Optimize-Windows":     {"Scripts et tweaks pour optimiser Windows 10/11 : désactiver la télémétrie, alléger le démarrage et améliorer les performances", "windows|optimization|debloat|performance|system"},
+	"https://github.com/barseghyanartur/app-menu":       {"Menu d'applications manquant pour macOS qui permet de lancer rapidement toutes les apps installées depuis une interface unifiée", "macos|launcher|apps|productivity|menu-bar"},
+	"https://github.com/tw93/Mole":                      {"Outil de maintenance macOS tout-en-un : nettoyage profond, désinstallation propre, optimisation système et analyse de disque", "macos|cleanup|maintenance|disk|optimization"},
+	"https://github.com/Kanaries/graphic-walker":        {"Alternative open-source à Tableau en React pour créer des visualisations de données interactives par glisser-déposer", "dataviz|tableau|react|open-source|bi"},
+	"https://github.com/man-group/dtale":                {"Interface Flask/React pour explorer et analyser des DataFrames pandas avec des graphiques interactifs et du SQL", "pandas|dataviz|flask|python|dataframe"},
+	"https://github.com/paviro/KoShelf":                 {"Dashboard web self-hosted pour agréger les notes, surlignages et statistiques de lecture depuis KOReader", "ereader|koreader|reading|library|self-hosted"},
+	"https://github.com/lightmode-laboratories/spacesuit": {"Workspace de productivité spatiale où poser librement notes, liens et fichiers sans hiérarchie de dossiers", "productivity|notes|workspace|knowledge-management|organization"},
+	"https://github.com/enudler/nudlers":                {"Dashboard finances personnelles unifié pour banques israéliennes avec catégorisation IA et prévisions de solde", "finance|budget|banking|ai|personal-finance"},
+	"https://github.com/ShashwatSricodes/PDFSlice":      {"Éditeur PDF 100% navigateur (fusion, découpe, rotation, compression) sans aucun upload sur serveur externe", "pdf|editor|privacy|browser|local"},
+	"https://github.com/Diolinux/PhotoGIMP":             {"Patch de configuration GIMP qui recalque l'interface et les raccourcis Adobe Photoshop pour faciliter la transition", "gimp|photoshop|design|image-editing|linux"},
+	"https://tvheadend.org":                             {"Serveur de streaming TV numérique open-source pour diffuser et enregistrer des chaînes DVB, IPTV et SAT>IP", "tv|streaming|dvb|iptv|self-hosted"},
+	"https://instaloader.github.io":                     {"Outil en ligne de commande pour télécharger des photos, vidéos et métadonnées Instagram de manière automatisée", "instagram|downloader|python|cli|social-media"},
+	"https://github.com/oop7/YTSage":                    {"Interface graphique multi-plateforme pour yt-dlp permettant de télécharger des vidéos YouTube avec sélection de format", "youtube|downloader|yt-dlp|gui|video"},
+	"https://github.com/andreknieriem/headunit-revived":  {"Application Android transformant une tablette en récepteur Android Auto pour une intégration véhicule sans achat de nouvel autoradio", "android|android-auto|car|head-unit|mobile"},
+	"https://github.com/wozniakpawel/PairPods":          {"App macOS de barre de menus pour partager simultanément l'audio sur plusieurs appareils Bluetooth connectés", "macos|bluetooth|audio|sharing|menu-bar"},
+	"https://github.com/ronitsingh10/FineTune":          {"Mixeur audio macOS dans la barre de menus avec contrôle de volume par application, routage multi-sorties et égaliseur 10 bandes", "macos|audio|equalizer|mixer|menu-bar"},
+	"https://veyon.io":                                  {"Logiciel open-source de surveillance et contrôle de salles informatiques pour enseignants avec partage d'écran et déploiement de fichiers", "remote-desktop|classroom|education|monitoring|open-source"},
+	"https://github.com/Keychron/Keychron-Keyboards-Hardware-Design": {"Fichiers de conception hardware open-source des claviers mécaniques Keychron (PCB, schémas KiCad)", "keyboard|hardware|pcb|open-source|keychron"},
+	"https://github.com/solaris-wm/solaris":             {"Premier modèle mondial de jeu vidéo multijoueur pour Minecraft basé sur JAX avec génération de prédictions vidéo", "minecraft|world-model|jax|ml-research|experimental"},
+	"https://www.luanti.org":                            {"Moteur de jeu voxel open-source (anciennement Minetest) pour créer et jouer à des jeux style Minecraft moddables", "voxel|game-engine|open-source|minecraft|moddable"},
+	"https://getdesign.md":                              {"Collection de spécifications de systèmes de design de sites populaires (Vercel, Stripe, Figma) utilisables par les agents IA", "design-system|ai|ui|specifications|components"},
+	"https://demo.akvorado.net":                         {"Collecteur et visualiseur de flux réseau NetFlow/IPFIX/sFlow avec enrichissement et stockage ClickHouse.", "netflow|ipfix|sflow|clickhouse|network|monitoring|kafka"},
+	"https://opencost.io":                               {"Monitoring open-source des coûts Kubernetes et des ressources cloud en temps réel.", "kubernetes|cost|finops|monitoring|k8s|prometheus|aws|gcp"},
+	"https://github.com/jazwa/rackstack":                {"Système de rack miniature modulaire imprimable en 3D conçu avec OpenSCAD pour le homelab.", "3d-printing|homelab|rack|openscad|hardware|diy"},
+	"https://flowbite-admin-dashboard.vercel.app":       {"Template de dashboard admin open-source construit avec Tailwind CSS et Flowbite.", "admin-dashboard|tailwindcss|flowbite|html|template|dashboard"},
+	"https://ileriayo.github.io/markdown-badges":        {"La plus grande collection de badges Markdown pour profils GitHub et documentation de projets.", "markdown|badges|github-profile|branding|documentation"},
+	"https://github.com/insidegui/VirtualBuddy":         {"Interface graphique pour virtualiser macOS 12+ sur Apple Silicon (M1/M2/M3/M4).", "macos|virtual-machine|apple-silicon|m1|swift|virtualization"},
+	"https://fakerjs.dev":                               {"Génération de données factices massives pour navigateur et Node.js (noms, adresses, dates, etc.).", "faker|testing|mock-data|nodejs|javascript|typescript"},
+	"https://github.com/mmaher88/logitune":              {"Clone de Logitech Options+ pour configurer les périphériques Logitech sous Linux.", "logitech|linux|peripherals|mouse|keyboard|options"},
+	"https://github.com/openai/whisper":                 {"Modèle de reconnaissance vocale robuste d'OpenAI entraîné sur des données audio à grande échelle.", "speech-recognition|asr|audio|openai|stt|transcription|python"},
+	"https://github.com/maorcc/gimp-mcp":                {"Serveur MCP permettant de contrôler GIMP depuis Claude Desktop ou d'autres agents IA.", "mcp|gimp|image-editing|claude|mcp-server|ai-tools"},
+	"https://onedev.io":                                 {"Serveur Git auto-hébergé avec CI/CD intégré, tableau Kanban et gestion de paquets.", "git|ci-cd|kanban|self-hosted|devops|packages"},
+	"https://openwolf.com":                              {"Middleware open-source pour Claude Code réduisant la consommation de tokens via un meilleur contexte.", "claude-code|mcp|middleware|token-optimization|cli|anthropic"},
+	"https://infinition.github.io/Bjorn/":               {"Outil de scan réseau et de sécurité offensif pour Raspberry Pi avec écran e-Paper 2.13\".", "raspberry-pi|network-scan|pentesting|security|offensive|brute-force"},
+	"https://agencyos.dev":                              {"OS open-source pour agences digitales combinant CMS headless Directus et frontend Nuxt.", "directus|nuxt|cms|headless|agency|vuejs|tailwindcss"},
+	"https://fynt.in":                                   {"Plateforme d'automatisation de workflows auto-hébergeable.", "workflow|automation|self-hosted|nocode"},
+	"http://chantonic.com/NodeGraphQt/":                 {"Framework Python/Qt pour créer des interfaces de graphes de nœuds.", "python|qt|nodegraph|ui|framework"},
+	"https://plakar.io":                                 {"Solution de backup avec déduplication alimentée par Kloset et ptar.", "backup|deduplication|go|self-hosted|snapshots"},
+	"https://sailor.sh":                                 {"Simulateur d'examen réaliste pour CKAD, CKA et CKS avec sessions chronométrées et clusters préconfigurés.", "kubernetes|cka|ckad|cks|exam|certification|practice"},
+	"https://github.com/buildermethods/design-os":       {"Processus de design structuré entre l'idée produit et la base de code sous forme de templates.", "design|product|methodology|templates|workflow"},
+	"https://www.serverkit.ai":                          {"Panneau de contrôle léger pour gérer applications web, bases de données et services sur un VPS.", "vps|control-panel|hosting|server|flask|react|self-hosted"},
+	"https://github.com/LiveContainer/LiveContainer":    {"Exécuter des applications iOS sans les installer réellement sur l'appareil.", "ios|container|sideload|apps"},
+	"https://jitsu.com":                                 {"Alternative open-source à Segment pour l'ingestion de données en temps réel avec pipelines scriptables.", "segment|data-ingestion|etl|real-time|clickhouse|postgres|snowflake"},
+	"https://aerolite.dev/applite":                      {"Interface graphique macOS conviviale pour gérer les applications via Homebrew Cask.", "macos|homebrew|gui|cask|swift|swiftui|app-manager"},
+	"https://blog.alexellis.io/kubernetes-marketplace-two-year-update/": {"Marketplace open-source d'outils CLI pour développeurs installant facilement helm, kubectl, terraform, etc.", "cli|kubernetes|devops|tools|helm|k8s|marketplace|golang"},
+	"https://github.com/AeternaLabsHQ/pullmd":           {"Service auto-hébergé de conversion URL vers Markdown pour humains et agents IA avec support MCP.", "mcp|markdown|url|ai-tools|claude-code|rest|pwa"},
+	"https://goreleaser.com":                            {"Automatise la création et la publication de releases pour les projets Go.", "goreleaser|go|release|automation|ci-cd|github-actions"},
+	"https://github.com/ilya-zlobintsev/LACT":           {"Outil de configuration et monitoring GPU AMD/NVIDIA sous Linux (overclocking, surveillance températures).", "gpu|amd|nvidia|linux|monitoring|rust|overclock"},
+	"https://kargo.io":                                  {"Orchestration GitOps du cycle de vie applicatif Kubernetes avec promotion entre environnements.", "kubernetes|gitops|cd|argocd|delivery|k8s|promotions"},
+	"https://github.com/im2nguyen/rover":                {"Visualisation interactive des plans et états Terraform sous forme de graphe navigable.", "terraform|visualization|diagram|iac|interactive"},
+	"https://github.com/OpenCloudGaming/OpenNOW":        {"Client GeForce NOW personnalisé et open-source pour le cloud gaming NVIDIA multiplateforme.", "geforce-now|cloud-gaming|nvidia|streaming|cross-platform"},
+}
+
+func main() {
+	f, err := os.Open(enrichCSVPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[ERROR] %v\n", err)
+		os.Exit(1)
+	}
+	reader := csv.NewReader(f)
+	headers, err := reader.Read()
+	if err != nil {
+		f.Close()
+		fmt.Fprintf(os.Stderr, "[ERROR] reading headers: %v\n", err)
+		os.Exit(1)
+	}
+	var rows [][]string
+	for {
+		row, err := reader.Read()
+		if err != nil {
+			break
+		}
+		rows = append(rows, row)
+	}
+	f.Close()
+
+	colIdx := make(map[string]int)
+	for i, h := range headers {
+		colIdx[h] = i
+	}
+	urlIdx := colIdx["url"]
+	descIdx := colIdx["description"]
+	tagsIdx := colIdx["tags"]
+
+	updated := 0
+	for _, row := range rows {
+		if urlIdx >= len(row) {
+			continue
+		}
+		meta, ok := META[row[urlIdx]]
+		if !ok {
+			continue
+		}
+		if descIdx < len(row) && row[descIdx] == "" {
+			row[descIdx] = meta[0]
+			updated++
+		}
+		if tagsIdx < len(row) && row[tagsIdx] == "" {
+			row[tagsIdx] = meta[1]
+		}
+	}
+
+	out, err := os.Create(enrichCSVPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[ERROR] %v\n", err)
+		os.Exit(1)
+	}
+	defer out.Close()
+	writer := csv.NewWriter(out)
+	if err := writer.Write(headers); err != nil {
+		fmt.Fprintf(os.Stderr, "[ERROR] writing headers: %v\n", err)
+		os.Exit(1)
+	}
+	for _, row := range rows {
+		writer.Write(row)
+	}
+	writer.Flush()
+	fmt.Printf("[OK] %d descriptions ajoutées / %d entrées totales\n", updated, len(rows))
+}

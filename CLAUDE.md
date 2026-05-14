@@ -33,9 +33,12 @@ Test avec build Docker : `docker compose -f compose.yml up` → http://localhost
 | `bookmarks.html` | Structure des données (catégories + liens, format Netscape) |
 | `bookmarks.csv` | Métadonnées enrichies : `url, name, category, subcategory, description, tags, date_added` |
 | `app-new.link.txt` | Liens à traiter (vider après traitement) |
+| `app-new.meta.json` | Métadonnées pré-fetchées par `bm-fetch` (temporaire, non commité) |
 | `app.link.txt` | Archive historique de tous les liens jamais traités (append only) |
-| `scripts/migrate.py` | Génère/met à jour `bookmarks.csv` depuis git history + `bookmarks.html` |
-| `scripts/enrich_meta.py` | Script d'injection manuelle de description+tags dans `bookmarks.csv` |
+| `go.mod` / `go.sum` | Module Go — outils scripts/ |
+| `scripts/bm-fetch.go` | Pré-fetch metadata URLs → `app-new.meta.json` (API GitHub + og: tags) |
+| `scripts/bm-migrate.go` | Met à jour `bookmarks.csv` depuis git history + `bookmarks.html` |
+| `scripts/bm-enrich.go` | Injecte descriptions/tags depuis la map META dans `bookmarks.csv` |
 | `ambient.mp3` | Musique d'ambiance |
 | `docker-compose.yml` | Nginx:alpine avec volumes — test local rapide |
 | `compose.yml` | Build via Dockerfile — test de l'image de prod |
@@ -58,7 +61,7 @@ bookmarks.csv  →  loadBookmarks() → parseCSV() → buildFromCSV()
           bookmarkMeta Map         (url → {description, tags, date_added, …})
 ```
 
-`bookmarks.html` est conservé comme artifact browser-importable et comme source pour `scripts/migrate.py` (qui traque les dates d'ajout via git diff). Il **n'est plus fetchépar le frontend**.
+`bookmarks.html` est conservé comme artifact browser-importable et comme source pour `scripts/bm-migrate.go` (qui traque les dates d'ajout via git diff). Il **n'est plus fetché par le frontend**.
 
 ### Format bookmarks.csv
 
@@ -68,33 +71,47 @@ https://example.com,Nom Outil,Catégorie,Sous-catégorie,Description courte en f
 ```
 
 - `tags` : séparés par `|`
-- `date_added` : timestamp Unix (rempli auto par `scripts/migrate.py`)
+- `date_added` : timestamp Unix (rempli auto par `scripts/bm-migrate.go`)
 - `description` : 1 phrase en français, cas d'usage principal (rempli manuellement)
 
 ---
 
 ## 4. Processus d'ajout de liens (`app-new.link.txt` → `bookmarks.html`)
 
-### Étape 1 — Identifier le site officiel
+### Étape 0 — Pré-fetch des métadonnées (**AVANT d'ouvrir Claude**)
 
-Pour chaque URL (surtout les GitHub) :
-1. WebFetch la page GitHub → chercher le champ "Website/Homepage"
-2. Lire la description courte du repo
-3. Si pas de homepage → WebSearch `"[nom outil]" official site OR documentation`
-4. Préférer : site officiel > docs officielles > page GitHub en dernier recours
+```bash
+go run ./scripts/bm-fetch.go
+# Recommandé pour >20 URLs (évite la limite de 60 req/h GitHub non authentifié) :
+GITHUB_TOKEN=ghp_xxx go run ./scripts/bm-fetch.go
+```
+
+Lit `app-new.link.txt`, appelle l'API GitHub ou parse les og: tags pour chaque URL,
+vérifie les doublons contre `bookmarks.csv`, et écrit `app-new.meta.json`.
+
+### Étape 1 — Lire app-new.meta.json
+
+Claude lit `app-new.meta.json` **sans effectuer aucun WebFetch**.
+
+- `official_url` → URL à insérer dans bookmarks.html (si vide → utiliser `input_url`)
+- `name` → nom de l'outil
+- `description_raw` → base pour rédiger la description française
+- `github_topics` → aide à la catégorisation
+- `is_duplicate: true` → ignorer (noter dans le rapport)
 
 ### Étape 2 — Comprendre l'outil
 
-Répondre mentalement avant toute catégorisation :
+À partir des données de `app-new.meta.json` :
 - **Quel problème résout-il ?** (cas d'usage principal, pas secondaire)
 - **Qui l'utilise ?** Dev / DevOps / Data / Sécu / Tout le monde ?
 - **Open-source ou SaaS fermé ? Self-hostable ?**
-- **Existe-t-il déjà dans les bookmarks sous une autre URL ?**
 
 ### Étape 3 — Vérification doublons
 
+`is_duplicate` dans `app-new.meta.json` est déjà calculé par `bm-fetch`.
+Vérification complémentaire si doute :
 ```
-Grep pattern: "domaine.com" dans bookmarks.html
+Grep pattern: "domaine.com" dans bookmarks.csv
 ```
 
 ### Étape 4 — Choisir la catégorie
@@ -180,12 +197,15 @@ Utiliser le timestamp Unix du jour pour ADD_DATE et LAST_MODIFIED.
 ### Étape 7 — Mettre à jour le CSV
 
 ```bash
-PYTHONIOENCODING=utf-8 python3 scripts/migrate.py
+go run ./scripts/bm-migrate.go
+go run ./scripts/bm-enrich.go
 ```
 
-Puis enrichir **manuellement** les nouvelles entrées dans `bookmarks.csv` :
+Puis enrichir **manuellement** dans `bookmarks.csv` les nouvelles entrées non couvertes par `bm-enrich` :
 - `description` : 1 phrase en français résumant le cas d'usage principal
 - `tags` : mots-clés séparés par `|` (ex: `docker|container|devops`)
+
+Ajouter les nouvelles descriptions à `scripts/bm-enrich.go` (map META) pour les batchs futurs.
 
 ### Étape 8 — Rapport final
 
@@ -196,7 +216,7 @@ Statut = `ajouté`, `doublon ignoré`, ou `catégorie à confirmer`
 
 ### Interdictions
 
-- Ne jamais catégoriser sans avoir visité l'URL (WebFetch obligatoire)
+- Ne jamais catégoriser sans avoir lu l'entrée dans `app-new.meta.json` (généré par `bm-fetch`)
 - Ne jamais mettre dans "Expérimental" si une catégorie existe
 - Ne jamais modifier les liens existants ni la structure HTML
 - Ne jamais oublier l'archivage dans `app.link.txt` et la mise à jour du CSV
@@ -227,7 +247,7 @@ html { font-size: clamp(13px, 0.43vw + 9.7px, 22px); }
 --sidebar-width: clamp(220px, 20vw, 500px);
 ```
 
-Toutes les tailles sont en `rem` pour s'adapter automatiquement à la résolution.
+Toutes les tailles sont en `rem` pour s'adaater automatiquement à la résolution.
 
 ### Features UI
 
