@@ -619,7 +619,7 @@ body[data-theme="apple-light"] .sort-btn.active {
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 0 0 1px var(--accent-dim);
 }
 
-body[data-theme="apple-light"] .date-filter-select {
+body[data-theme="apple-light"] #date-filter-btn {
     border-radius: 100px;
 }
 

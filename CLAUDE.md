@@ -39,6 +39,7 @@ Test avec build Docker : `docker compose -f compose.yml up` → http://localhost
 | `scripts/bm-fetch.go` | Pré-fetch metadata URLs → `app-new.meta.json` (API GitHub + og: tags) |
 | `scripts/bm-migrate.go` | Met à jour `bookmarks.csv` depuis git history + `bookmarks.html` |
 | `scripts/bm-enrich.go` | Injecte descriptions/tags depuis la map META dans `bookmarks.csv` |
+| `scripts/bm-stars.go` | Enrichit `bookmarks.csv` via API GitHub : `stars`, `pushed_at`, `archived`, `tags` (topics si vides) |
 | `ambient.mp3` | Musique d'ambiance |
 | `docker-compose.yml` | Nginx:alpine avec volumes — test local rapide |
 | `compose.yml` | Build via Dockerfile — test de l'image de prod |
@@ -66,13 +67,16 @@ bookmarks.csv  →  loadBookmarks() → parseCSV() → buildFromCSV()
 ### Format bookmarks.csv
 
 ```csv
-url,name,category,subcategory,description,tags,date_added
-https://example.com,Nom Outil,Catégorie,Sous-catégorie,Description courte en français,tag1|tag2|tag3,1767298944
+url,name,category,subcategory,description,tags,date_added,stars,pushed_at,archived
+https://example.com,Nom Outil,Catégorie,Sous-catégorie,Description courte en français,tag1|tag2|tag3,1767298944,1234,2026-05-01,
 ```
 
-- `tags` : séparés par `|`
+- `tags` : séparés par `|` (curés à la main / `bm-enrich`, sinon auto-remplis depuis les topics GitHub par `bm-stars`)
 - `date_added` : timestamp Unix (rempli auto par `scripts/bm-migrate.go`)
 - `description` : 1 phrase en français, cas d'usage principal (rempli manuellement)
+- `stars` : étoiles GitHub (auto `bm-stars.go`)
+- `pushed_at` : date du dernier push `YYYY-MM-DD` (auto `bm-stars.go`) → badge « inactif » au frontend si > 12 mois
+- `archived` : `true` si dépôt archivé (auto `bm-stars.go`) → badge « 🗄 archivé » au frontend
 
 ---
 
@@ -197,9 +201,12 @@ Utiliser le timestamp Unix du jour pour ADD_DATE et LAST_MODIFIED.
 ### Étape 7 — Mettre à jour le CSV
 
 ```bash
-go run ./scripts/bm-migrate.go
-go run ./scripts/bm-enrich.go
+go run ./scripts/bm-migrate.go                       # CSV ← bookmarks.html + git history (dates)
+go run ./scripts/bm-enrich.go                        # descriptions/tags curés depuis la map META
+GITHUB_TOKEN=ghp_xxx go run ./scripts/bm-stars.go    # stars + pushed_at + archived + tags (topics si vides)
 ```
+
+Ordre important : `bm-stars` en dernier — il ne remplit les `tags` que s'ils sont vides, donc les tags curés par `bm-enrich` priment. Token recommandé (181+ dépôts, limite 60 req/h sans token).
 
 Puis enrichir **manuellement** dans `bookmarks.csv` les nouvelles entrées non couvertes par `bm-enrich` :
 - `description` : 1 phrase en français résumant le cas d'usage principal

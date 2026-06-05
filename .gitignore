@@ -36,3 +36,8 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+
+vps/
+
+# Lanceur local du scraper VPS (référence l'hôte SSH interne + dépend de vps/)
+bm-scout.bat

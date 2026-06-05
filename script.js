@@ -15,6 +15,7 @@ const BATCH_SIZE = 30;
 let displayedCount = 0;
 let currentFilteredBookmarks = [];
 let isLoading = false;
+let lazyObserver = null;
 
 // ===== FAVORIS =====
 function isFavorite(url) {
@@ -46,6 +47,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initFavoritesPanel();
     initUpdatesPanel();
     initStatsPanel();
+    initTagsPanel();
     initImportBookmarks();
     console.log('Rendering folder tree...');
     renderFolderTree();
@@ -152,6 +154,9 @@ function buildFromCSV(rows) {
             description: row.description || '',
             tags:        row.tags ? row.tags.split('|').filter(Boolean) : [],
             date_added:  row.date_added ? parseInt(row.date_added) : 0,
+            stars:       row.stars ? parseInt(row.stars) : null,
+            pushed_at:   row.pushed_at || '',
+            archived:    row.archived === 'true',
         });
     });
 
@@ -238,11 +243,43 @@ function initSortBar() {
         });
     }
 
-    const dateFilter = document.getElementById('date-filter');
-    if (dateFilter) {
-        dateFilter.addEventListener('change', () => {
-            activeFilters.dateRange = dateFilter.value ? parseInt(dateFilter.value) : null;
-            displayBookmarks();
+    // Filtre date — dropdown custom thémé (remplace le <select> natif non-thémable)
+    const dateBtn   = document.getElementById('date-filter-btn');
+    const datePanel = document.getElementById('date-panel');
+    if (dateBtn && datePanel) {
+        dateBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const open = datePanel.classList.toggle('open');
+            dateBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+
+        datePanel.querySelectorAll('.date-option').forEach(opt => {
+            opt.addEventListener('click', () => {
+                activeFilters.dateRange = opt.dataset.days ? parseInt(opt.dataset.days) : null;
+                datePanel.querySelectorAll('.date-option').forEach(o => {
+                    o.classList.remove('active');
+                    o.setAttribute('aria-selected', 'false');
+                });
+                opt.classList.add('active');
+                opt.setAttribute('aria-selected', 'true');
+                dateBtn.textContent = opt.textContent + ' ▾';
+                datePanel.classList.remove('open');
+                dateBtn.setAttribute('aria-expanded', 'false');
+                displayBookmarks();
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#date-filter')) {
+                datePanel.classList.remove('open');
+                dateBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                datePanel.classList.remove('open');
+                dateBtn.setAttribute('aria-expanded', 'false');
+            }
         });
     }
 }
@@ -529,10 +566,11 @@ function displayBookmarks() {
     let filtered = allBookmarks;
 
     // Filter by folder
+    const hasActiveFilters = activeFilters.tags.length > 0 || activeFilters.dateRange;
     if (currentFolder) {
         filtered = filtered.filter(b => b.folder === currentFolder);
-    } else if (!searchQuery) {
-        // On home page without search, show only bookmarks without folder
+    } else if (!searchQuery && !hasActiveFilters) {
+        // On home page without search ni filtre, show only bookmarks without folder
         filtered = filtered.filter(b => !b.folder || b.folder === 'Root');
     }
 
@@ -577,6 +615,13 @@ function displayBookmarks() {
             const ma = bookmarkMeta.get(a.url);
             const mb = bookmarkMeta.get(b.url);
             return (mb?.date_added || 0) - (ma?.date_added || 0);
+        });
+    } else if (currentSort === 'stars') {
+        filtered.sort((a, b) => {
+            const sa = bookmarkMeta.get(a.url)?.stars;
+            const sb = bookmarkMeta.get(b.url)?.stars;
+            // Dépôts sans stars (non-GitHub) relégués en fin de liste
+            return (sb ?? -1) - (sa ?? -1);
         });
     } else if (currentSort === 'domain') {
         filtered.sort((a, b) => {
@@ -659,34 +704,33 @@ function loadMoreBookmarks(grid) {
     displayedCount += batch.length;
     isLoading = false;
 
-    // Supprimer l'indicateur de chargement s'il existe
-    const loader = grid.querySelector('.lazy-loader');
-    if (loader) loader.remove();
+    // Supprimer l'indicateur de chargement existant
+    const oldLoader = grid.querySelector('.lazy-loader');
+    if (oldLoader) {
+        if (lazyObserver) lazyObserver.unobserve(oldLoader);
+        oldLoader.remove();
+    }
 
-    // Ajouter un indicateur s'il reste des bookmarks à charger
+    // Ajouter un sentinel s'il reste des bookmarks à charger
     if (displayedCount < currentFilteredBookmarks.length) {
         const loader = document.createElement('div');
         loader.className = 'lazy-loader';
         loader.textContent = `Chargement... (${displayedCount}/${currentFilteredBookmarks.length})`;
         grid.appendChild(loader);
+        // Observe le sentinel : auto-charge dès qu'il est visible (même sans scroll)
+        if (lazyObserver) lazyObserver.observe(loader);
     }
 }
 
-// Détecter le scroll pour charger plus
+// IntersectionObserver : charge le lot suivant dès que le sentinel entre dans le viewport.
+// Plus robuste que le scroll : fonctionne même si les cartes ne débordent pas l'écran.
 function initLazyLoading() {
     const content = document.querySelector('.content');
-    content.addEventListener('scroll', () => {
-        if (isLoading) return;
-
-        const scrollTop = content.scrollTop;
-        const scrollHeight = content.scrollHeight;
-        const clientHeight = content.clientHeight;
-
-        // Charger plus quand on approche de la fin (200px avant)
-        if (scrollTop + clientHeight >= scrollHeight - 200) {
+    lazyObserver = new IntersectionObserver((entries) => {
+        if (entries.some(e => e.isIntersecting) && !isLoading) {
             loadMoreBookmarks();
         }
-    });
+    }, { root: content, rootMargin: '200px' });
 }
 
 // Create folder card
@@ -825,6 +869,40 @@ function createBookmarkCard(bookmark) {
             dateEl.textContent = formatDateShort(meta.date_added);
             dateEl.title = new Date(meta.date_added * 1000).toLocaleDateString('fr-FR');
             info.appendChild(dateEl);
+        }
+
+        // Santé du dépôt GitHub : stars + inactivité
+        if (meta.stars != null || meta.pushed_at) {
+            const health = document.createElement('div');
+            health.className = 'bookmark-health';
+
+            if (meta.stars != null) {
+                const starEl = document.createElement('span');
+                starEl.className = 'gh-stars';
+                starEl.textContent = `★ ${formatStars(meta.stars)}`;
+                starEl.title = `${meta.stars.toLocaleString('fr-FR')} stars GitHub`;
+                health.appendChild(starEl);
+            }
+
+            // Archivé = signal d'abandon le plus fort (prioritaire sur "inactif")
+            if (meta.archived) {
+                const arch = document.createElement('span');
+                arch.className = 'gh-archived';
+                arch.textContent = '🗄 archivé';
+                arch.title = 'Dépôt archivé par son auteur (lecture seule, non maintenu)';
+                health.appendChild(arch);
+            } else {
+                const stale = repoStaleness(meta.pushed_at);
+                if (stale) {
+                    const staleEl = document.createElement('span');
+                    staleEl.className = 'gh-stale';
+                    staleEl.textContent = `⚠ ${stale.label}`;
+                    staleEl.title = `Dernier push : ${new Date(meta.pushed_at).toLocaleDateString('fr-FR')}`;
+                    health.appendChild(staleEl);
+                }
+            }
+
+            if (health.children.length > 0) info.appendChild(health);
         }
     }
 
@@ -1631,6 +1709,68 @@ function initFavoritesPanel() {
     };
 }
 
+// ─── Explorateur de tags ────────────────────────────────────────────────────
+function initTagsPanel() {
+    const btn   = document.getElementById('tags-btn');
+    const panel = document.getElementById('tags-panel');
+    const close = panel?.querySelector('.panel-close');
+    if (!btn || !panel) return;
+
+    btn.addEventListener('click', () => {
+        renderTagCloud();
+        panel.classList.remove('hidden');
+        panel.setAttribute('aria-hidden', 'false');
+    });
+    close?.addEventListener('click', closeTags);
+    panel.addEventListener('click', e => { if (e.target === panel) closeTags(); });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && !panel.classList.contains('hidden')) closeTags();
+    });
+
+    function closeTags() {
+        panel.classList.add('hidden');
+        panel.setAttribute('aria-hidden', 'true');
+    }
+}
+
+function renderTagCloud() {
+    const el = document.getElementById('tags-content');
+    if (!el) return;
+
+    const tagCount = {};
+    bookmarkMeta.forEach(meta => {
+        (meta.tags || []).forEach(t => { tagCount[t] = (tagCount[t] || 0) + 1; });
+    });
+    const tags = Object.entries(tagCount).sort((a, b) => b[1] - a[1]);
+    if (tags.length === 0) { el.innerHTML = '<p class="tag-cloud-empty">Aucun tag.</p>'; return; }
+
+    const max = tags[0][1];
+    const min = tags[tags.length - 1][1];
+    el.innerHTML = '';
+
+    tags.forEach(([tag, n]) => {
+        // Taille de police 0.65rem → 1.4rem selon la fréquence
+        const ratio = max === min ? 0.5 : (n - min) / (max - min);
+        const size = (0.65 + ratio * 0.75).toFixed(2);
+        const pill = document.createElement('button');
+        pill.className = 'cloud-tag';
+        pill.style.fontSize = `${size}rem`;
+        pill.innerHTML = `${tag}<span class="cloud-tag-count">${n}</span>`;
+        pill.title = `${n} outil${n > 1 ? 's' : ''} taggé${n > 1 ? 's' : ''} « ${tag} »`;
+        pill.addEventListener('click', () => {
+            document.getElementById('tags-panel').classList.add('hidden');
+            document.getElementById('tags-panel').setAttribute('aria-hidden', 'true');
+            currentFolder = null;
+            const searchInput = document.getElementById('search');
+            if (searchInput) searchInput.value = '';
+            searchQuery = '';
+            activeFilters.tags = [tag.toLowerCase()];
+            displayBookmarks();
+        });
+        el.appendChild(pill);
+    });
+}
+
 // ─── Stats ────────────────────────────────────────────────────────────────
 function initStatsPanel() {
     const btn   = document.getElementById('stats-btn');
@@ -1703,6 +1843,20 @@ function renderStats() {
     });
     const maxMonth = Math.max(...Object.values(months), 1);
 
+    // Santé GitHub : stars + inactivité
+    let totalStars = 0, repoCount = 0, staleCount = 0, archivedCount = 0;
+    const starred = [];
+    bookmarkMeta.forEach((meta, url) => {
+        if (meta.stars != null) {
+            totalStars += meta.stars;
+            repoCount++;
+            starred.push({ name: meta.name, url, stars: meta.stars });
+        }
+        if (meta.archived) archivedCount++;
+        else if (repoStaleness(meta.pushed_at)) staleCount++;
+    });
+    const topStarred = starred.sort((a, b) => b.stars - a.stars).slice(0, 10);
+
     el.innerHTML = `
         <div class="stats-kpis">
             <div class="stats-kpi"><span class="kpi-value">${total}</span><span class="kpi-label">Bookmarks</span></div>
@@ -1710,6 +1864,25 @@ function renderStats() {
             <div class="stats-kpi"><span class="kpi-value">${Object.keys(domCount).length}</span><span class="kpi-label">Domaines</span></div>
             <div class="stats-kpi"><span class="kpi-value">${Math.round(withMeta/total*100)}%</span><span class="kpi-label">Avec description</span></div>
         </div>
+
+        ${repoCount > 0 ? `
+        <div class="stats-kpis">
+            <div class="stats-kpi"><span class="kpi-value">${formatStars(totalStars)}</span><span class="kpi-label">★ cumulées</span></div>
+            <div class="stats-kpi"><span class="kpi-value">${repoCount}</span><span class="kpi-label">Dépôts GitHub</span></div>
+            <div class="stats-kpi"><span class="kpi-value">${staleCount}</span><span class="kpi-label">Inactifs +1 an</span></div>
+            <div class="stats-kpi"><span class="kpi-value">${archivedCount}</span><span class="kpi-label">Archivés 🗄</span></div>
+        </div>
+
+        <div class="stats-section">
+            <h3>Top dépôts par stars</h3>
+            ${topStarred.map(r => `
+                <div class="stats-bar-row">
+                    <a class="stats-bar-name stats-link" href="${r.url}" target="_blank" rel="noopener">${r.name}</a>
+                    <div class="stats-bar-track"><div class="stats-bar-fill stats-bar-fill-star" style="width:${Math.round(r.stars/topStarred[0].stars*100)}%"></div></div>
+                    <span class="stats-bar-count">★ ${formatStars(r.stars)}</span>
+                </div>`).join('')}
+        </div>
+        ` : ''}
 
         <div class="stats-section">
             <h3>Ajouts — 12 derniers mois</h3>
@@ -1758,6 +1931,23 @@ function formatDateShort(timestamp) {
     return d.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
 }
 
+// Formate un nombre de stars : 1234 → "1.2k", 12345 → "12k"
+function formatStars(n) {
+    if (n >= 1000) return (n / 1000).toFixed(n < 10000 ? 1 : 0).replace('.0', '') + 'k';
+    return String(n);
+}
+
+// Retourne {months, label} si le dépôt est inactif depuis > 12 mois, sinon null.
+function repoStaleness(pushedAt) {
+    if (!pushedAt) return null;
+    const pushed = new Date(pushedAt).getTime();
+    if (isNaN(pushed)) return null;
+    const months = Math.floor((Date.now() - pushed) / (30.4 * 86400 * 1000));
+    if (months < 12) return null;
+    const years = Math.floor(months / 12);
+    return { months, label: years >= 1 ? `inactif ${years} an${years > 1 ? 's' : ''}` : `inactif ${months} mois` };
+}
+
 function formatDateFull(timestamp) {
     const d = new Date(timestamp * 1000);
     return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -1780,21 +1970,20 @@ function groupByMonth(bookmarks) {
 
 // ─── Feature NOUVEAUTÉS ────────────────────────────────────────────────────
 function initUpdatesPanel() {
-    const btn    = document.getElementById('updates-btn');
-    const badge  = document.getElementById('updates-badge');
-    const panel  = document.getElementById('updates-panel');
-    const list   = document.getElementById('updates-list');
-    const close  = panel?.querySelector('.panel-close');
+    const btn   = document.getElementById('updates-btn');
+    const badge = document.getElementById('updates-badge');
+    const panel = document.getElementById('updates-panel');
+    const list  = document.getElementById('updates-list');
+    const close = panel?.querySelector('.panel-close');
+    const tabs  = panel?.querySelectorAll('.updates-tab');
 
     if (!btn || !panel) return;
 
-    // Calculer le max date_added pour la prochaine visite
-    const maxDateAdded = Math.max(0, ...Array.from(bookmarkMeta.values()).map(m => m.date_added || 0));
-
-    // Récupérer la date de dernière visite de l'onglet Nouveautés
+    const maxDateAdded  = Math.max(0, ...Array.from(bookmarkMeta.values()).map(m => m.date_added || 0));
     const lastVisitDate = parseInt(localStorage.getItem('lastVisitDate') || '0');
 
-    // Bookmarks nouveaux depuis la dernière visite
+    let activeTab = 'new';
+
     function getNewBookmarks() {
         return allBookmarks
             .filter(b => {
@@ -1808,7 +1997,16 @@ function initUpdatesPanel() {
             });
     }
 
-    // Mettre à jour le badge
+    function getAllSorted() {
+        return [...allBookmarks]
+            .filter(b => (bookmarkMeta.get(b.url)?.date_added || 0) > 0)
+            .sort((a, b) => {
+                const da = bookmarkMeta.get(a.url)?.date_added || 0;
+                const db = bookmarkMeta.get(b.url)?.date_added || 0;
+                return db - da;
+            });
+    }
+
     function refreshBadge() {
         const count = getNewBookmarks().length;
         if (count > 0) {
@@ -1819,55 +2017,66 @@ function initUpdatesPanel() {
         }
     }
 
-    // Remplir le panel
-    function renderUpdates() {
-        list.innerHTML = '';
-        const newBMs = getNewBookmarks();
+    function buildEntry(b, markNew) {
+        const meta   = bookmarkMeta.get(b.url);
+        const isNew  = markNew && (meta?.date_added || 0) > lastVisitDate;
+        const entry  = document.createElement('div');
+        entry.className = 'timeline-entry' + (isNew ? ' tl-new-entry' : '');
+        const rootCat = (b.folder || '').split(' > ')[0];
+        let hostname = '';
+        try { hostname = new URL(b.url).hostname; } catch {}
+        entry.innerHTML = `
+            <span class="tl-cat">${rootCat}</span>
+            <span class="tl-name">${isNew ? '<span class="tl-new-dot"></span>' : ''}<a href="${b.url}" target="_blank" rel="noopener">${b.title}</a><span class="tl-url">${hostname}</span></span>
+        `;
+        return entry;
+    }
 
-        if (newBMs.length === 0) {
-            list.innerHTML = '<p class="panel-empty">Aucun ajout depuis votre dernière visite.</p>';
+    function renderList(bookmarks, markNew, emptyMsg) {
+        list.innerHTML = '';
+        if (bookmarks.length === 0) {
+            list.innerHTML = `<p class="panel-empty">${emptyMsg}</p>`;
             return;
         }
-
-        const groups = groupByMonth(newBMs);
+        const groups = groupByMonth(bookmarks);
         groups.forEach((items, monthLabel) => {
             const group = document.createElement('div');
             group.className = 'timeline-group';
-
             const header = document.createElement('div');
             header.className = 'timeline-group-header';
             header.textContent = `${monthLabel} — ${items.length} ajout${items.length > 1 ? 's' : ''}`;
             group.appendChild(header);
-
-            items.forEach(b => {
-                const meta = bookmarkMeta.get(b.url);
-                const entry = document.createElement('div');
-                entry.className = 'timeline-entry';
-                const rootCat = (b.folder || '').split(' > ')[0];
-                let hostname = '';
-                try { hostname = new URL(b.url).hostname; } catch {}
-                entry.innerHTML = `
-                    <span class="tl-cat">${rootCat}</span>
-                    <span class="tl-name"><a href="${b.url}" target="_blank" rel="noopener">${b.title}</a><span class="tl-url">${hostname}</span></span>
-                `;
-                group.appendChild(entry);
-            });
-
+            items.forEach(b => group.appendChild(buildEntry(b, markNew)));
             list.appendChild(group);
         });
     }
 
+    function render() {
+        if (activeTab === 'new') {
+            renderList(getNewBookmarks(), false, 'Aucun ajout depuis votre dernière visite.');
+        } else {
+            renderList(getAllSorted(), true, 'Aucun historique disponible.');
+        }
+    }
+
+    tabs?.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            activeTab = tab.dataset.tab;
+            render();
+        });
+    });
+
     refreshBadge();
 
     btn.addEventListener('click', () => {
-        renderUpdates();
+        activeTab = 'new';
+        tabs?.forEach(t => t.classList.toggle('active', t.dataset.tab === 'new'));
+        render();
         panel.classList.remove('hidden');
         panel.setAttribute('aria-hidden', 'false');
-        // Sauvegarder la date de visite (max date existante)
-        if (maxDateAdded > 0) {
-            localStorage.setItem('lastVisitDate', maxDateAdded.toString());
-        }
-        // Cacher le badge
+        if (maxDateAdded > 0) localStorage.setItem('lastVisitDate', maxDateAdded.toString());
         badge.classList.add('hidden');
     });
 

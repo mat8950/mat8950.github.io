@@ -373,6 +373,7 @@ body[data-theme="gruvbox"]     #theme-selector-btn .btn-swatch { background: #fa
     padding: 1.5rem 2rem;
     overflow-y: auto;
     position: relative;
+    z-index: 0;
     background: transparent;
     transition: background-color 0.35s ease;
 }

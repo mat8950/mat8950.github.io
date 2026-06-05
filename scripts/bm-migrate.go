@@ -22,7 +22,7 @@ const (
 	migrateCSVFile  = "bookmarks.csv"
 )
 
-var csvHeaders = []string{"url", "name", "category", "subcategory", "description", "tags", "date_added"}
+var csvHeaders = []string{"url", "name", "category", "subcategory", "description", "tags", "date_added", "stars", "pushed_at", "archived"}
 
 type bmBookmark struct {
 	URL         string
@@ -45,6 +45,9 @@ type bmCSVRow struct {
 	Description string
 	Tags        string
 	DateAdded   int64
+	Stars       string // GitHub stargazers (rempli par bm-stars.go)
+	PushedAt    string // GitHub dernier push ISO8601 (rempli par bm-stars.go)
+	Archived    string // "true" si dépôt archivé (rempli par bm-stars.go)
 }
 
 var addedHrefRe = regexp.MustCompile(`(?m)^\+[^+].*<A HREF="([^"]+)"`)
@@ -327,6 +330,9 @@ func migrateLoadCSV(path string) (map[string]bmCSVRow, error) {
 			Description: get(row, "description"),
 			Tags:        get(row, "tags"),
 			DateAdded:   dateAdded,
+			Stars:       get(row, "stars"),
+			PushedAt:    get(row, "pushed_at"),
+			Archived:    get(row, "archived"),
 		}
 	}
 	return data, nil
@@ -354,6 +360,7 @@ func migrateSaveCSV(path string, data map[string]bmCSVRow) error {
 		writer.Write([]string{
 			r.URL, r.Name, r.Category, r.Subcategory,
 			r.Description, r.Tags, strconv.FormatInt(r.DateAdded, 10),
+			r.Stars, r.PushedAt, r.Archived,
 		})
 	}
 	writer.Flush()

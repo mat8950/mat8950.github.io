@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>bm-scout</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <span class="logo">bm-scout</span>
+  <div class="account-tabs" id="account-tabs"></div>
+  <span class="last-poll" id="last-poll"></span>
+</div>
+
+<!-- Card area -->
+<div class="card-area" id="card-area">
+  <div class="card-stack">
+    <div class="card" id="card">
+      <div class="card-account" id="card-account"></div>
+      <div class="card-text" id="card-text"></div>
+      <div class="card-urls" id="card-urls"></div>
+      <div class="card-ts" id="card-ts"></div>
+      <button class="btn-open" id="btn-open">Open tweet ↗</button>
+    </div>
+    <div class="card-empty" id="card-empty" style="display:none">
+      <div class="empty-icon">✓</div>
+      <div class="empty-msg">Aucun tweet en attente</div>
+      <button class="btn-refresh" id="btn-refresh">Actualiser</button>
+    </div>
+  </div>
+
+  <!-- Swipe buttons -->
+  <div class="swipe-row" id="swipe-row">
+    <button class="btn-skip"    id="btn-skip"    title="Skip (←)">✕</button>
+    <div class="swipe-hint">← skip · → add</div>
+    <button class="btn-approve" id="btn-approve" title="Add URLs (→)">✓</button>
+  </div>
+</div>
+
+<!-- History strip -->
+<div class="history-strip" id="history-strip"></div>
+
+<!-- Selection panel -->
+<div class="selection-panel">
+  <div class="sel-header">
+    <span>Sélection (<span id="sel-count">0</span>)</span>
+    <button class="btn-export" id="btn-export">Copier</button>
+    <button class="btn-clear-sel" id="btn-clear-sel">Vider</button>
+  </div>
+  <div class="sel-list" id="sel-list"></div>
+  <div class="sel-input-row">
+    <input type="text" id="url-input" placeholder="https://github.com/…" />
+    <button id="btn-add-url">+</button>
+  </div>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

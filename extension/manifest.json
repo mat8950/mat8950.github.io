@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "bm-scout",
+  "version": "1.0",
+  "description": "Découvre les outils partagés par @bearstech, @GithubProjects, @tom_doerr",
+  "permissions": ["storage", "alarms", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "bm-scout"
+  }
+}

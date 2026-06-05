@@ -1,4 +1,4 @@
-const CACHE = 'bookmarks-v1';
+const CACHE = 'bookmarks-v2';
 const ASSETS = [
     '/',
     '/index.html',
@@ -9,7 +9,6 @@ const ASSETS = [
     '/css/variables.css',
     '/css/layout.css',
     '/css/components.css',
-    '/css/animations.css',
     '/css/background.css',
     '/css/themes.css',
 ];

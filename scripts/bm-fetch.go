@@ -20,9 +20,10 @@ import (
 )
 
 const (
-	inputFile  = "app-new.link.txt"
-	outputFile = "app-new.meta.json"
-	csvFile    = "bookmarks.csv"
+	inputFile   = "app-new.link.txt"
+	outputFile  = "app-new.meta.json"
+	csvFile     = "bookmarks.csv"
+	archiveFile = "app.link.txt"
 )
 
 type MetaEntry struct {
@@ -67,6 +68,28 @@ func main() {
 	domains, err := loadCSVDomains(csvFile)
 	if err != nil && !os.IsNotExist(err) {
 		fmt.Fprintf(os.Stderr, "[WARN] loading CSV domains: %v\n", err)
+	}
+
+	// Also check app.link.txt — any URL already processed is a duplicate
+	if archLines, err := readLines(archiveFile); err == nil {
+		for _, l := range archLines {
+			l = strings.TrimSpace(l)
+			if l == "" || strings.HasPrefix(l, "#") {
+				continue
+			}
+			if key := normURLKey(l); key != "" {
+				if _, exists := domains[key]; !exists {
+					domains[key] = l
+				}
+			}
+			// GitHub canonical key (github.com/owner/repo)
+			if owner, repo, ok := normalizeGitHubURL(l); ok {
+				canonical := fmt.Sprintf("github.com/%s/%s", strings.ToLower(owner), strings.ToLower(repo))
+				if _, exists := domains[canonical]; !exists {
+					domains[canonical] = l
+				}
+			}
+		}
 	}
 
 	client := &http.Client{Timeout: 15 * time.Second}
