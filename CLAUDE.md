@@ -36,7 +36,8 @@ Test avec build Docker : `docker compose -f compose.yml up` → http://localhost
 | `app-new.meta.json` | Métadonnées pré-fetchées par `bm-fetch` (temporaire, non commité) |
 | `app.link.txt` | Archive historique de tous les liens jamais traités (append only) |
 | `go.mod` / `go.sum` | Module Go — outils scripts/ |
-| `scripts/bm-fetch.go` | Pré-fetch metadata URLs → `app-new.meta.json` (API GitHub + og: tags) |
+| `scripts/bm-fetch.go` | Pré-fetch metadata URLs → `app-new.meta.json` (API GitHub + og: tags), dédup par URL + par nom |
+| `scripts/bm-suggest.go` | Suggère catégorie/sous-catégorie (mots-clés + précédent par tags) depuis `app-new.meta.json` — lecture seule, ne modifie rien |
 | `scripts/bm-migrate.go` | Met à jour `bookmarks.csv` depuis git history + `bookmarks.html` |
 | `scripts/bm-enrich.go` | Injecte descriptions/tags depuis la map META dans `bookmarks.csv` |
 | `scripts/bm-stars.go` | Enrichit `bookmarks.csv` via API GitHub : `stars`, `pushed_at`, `archived`, `tags` (topics si vides) |
@@ -95,6 +96,10 @@ vérifie les doublons contre `bookmarks.csv`, et écrit `app-new.meta.json`.
 
 ### Étape 1 — Lire app-new.meta.json
 
+```bash
+go run ./scripts/bm-suggest.go   # optionnel, lecture seule — suggestions catégorie/précédent
+```
+
 Claude lit `app-new.meta.json` **sans effectuer aucun WebFetch**.
 
 - `official_url` → URL à insérer dans bookmarks.html (si vide → utiliser `input_url`)
@@ -102,6 +107,8 @@ Claude lit `app-new.meta.json` **sans effectuer aucun WebFetch**.
 - `description_raw` → base pour rédiger la description française
 - `github_topics` → aide à la catégorisation
 - `is_duplicate: true` → ignorer (noter dans le rapport)
+- `possible_dup_by_name: true` → nom proche d'une entrée existante (`similar_existing_url`) sous un domaine différent (ex: fork, site officiel vs repo GitHub) — vérifier avant d'ajouter, ne pas ignorer automatiquement
+- Suggestions de `bm-suggest.go` : indicatives seulement, le jugement (table de la section 4 étape 4) prime en cas de divergence
 
 ### Étape 2 — Comprendre l'outil
 

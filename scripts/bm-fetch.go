@@ -27,14 +27,16 @@ const (
 )
 
 type MetaEntry struct {
-	InputURL       string   `json:"input_url"`
-	OfficialURL    string   `json:"official_url"`
-	Name           string   `json:"name"`
-	DescriptionRaw string   `json:"description_raw"`
-	IsGitHub       bool     `json:"is_github"`
-	GitHubTopics   []string `json:"github_topics"`
-	IsDuplicate    bool     `json:"is_duplicate"`
-	ExistingURL    string   `json:"existing_url,omitempty"`
+	InputURL           string   `json:"input_url"`
+	OfficialURL        string   `json:"official_url"`
+	Name               string   `json:"name"`
+	DescriptionRaw     string   `json:"description_raw"`
+	IsGitHub           bool     `json:"is_github"`
+	GitHubTopics       []string `json:"github_topics"`
+	IsDuplicate        bool     `json:"is_duplicate"`
+	ExistingURL        string   `json:"existing_url,omitempty"`
+	PossibleDupByName  bool     `json:"possible_dup_by_name,omitempty"`
+	SimilarExistingURL string   `json:"similar_existing_url,omitempty"`
 }
 
 type gitHubRepo struct {
@@ -68,6 +70,10 @@ func main() {
 	domains, err := loadCSVDomains(csvFile)
 	if err != nil && !os.IsNotExist(err) {
 		fmt.Fprintf(os.Stderr, "[WARN] loading CSV domains: %v\n", err)
+	}
+	names, err := loadCSVNames(csvFile)
+	if err != nil && !os.IsNotExist(err) {
+		fmt.Fprintf(os.Stderr, "[WARN] loading CSV names: %v\n", err)
 	}
 
 	// Also check app.link.txt — any URL already processed is a duplicate
@@ -123,14 +129,20 @@ func main() {
 				officialURL = fmt.Sprintf("https://github.com/%s/%s", owner, repo)
 			}
 			fmt.Printf("%s github.com/%s/%s → %s\n", prefix, owner, repo, officialURL)
-			entries = append(entries, MetaEntry{
+			entry := MetaEntry{
 				InputURL:       rawURL,
 				OfficialURL:    officialURL,
 				Name:           ghRepo.Name,
 				DescriptionRaw: ghRepo.Description,
 				IsGitHub:       true,
 				GitHubTopics:   ghRepo.Topics,
-			})
+			}
+			if simURL, ok := names[normName(ghRepo.Name)]; ok {
+				entry.PossibleDupByName = true
+				entry.SimilarExistingURL = simURL
+				fmt.Printf("     ⚠ nom proche d'une entrée existante: %s\n", simURL)
+			}
+			entries = append(entries, entry)
 			// Polite delay between GitHub API calls
 			time.Sleep(100 * time.Millisecond)
 		} else {
@@ -145,12 +157,18 @@ func main() {
 				officialURL = canonURL
 			}
 			fmt.Printf("%s %s → fetched (%q)\n", prefix, rawURL, name)
-			entries = append(entries, MetaEntry{
+			entry := MetaEntry{
 				InputURL:       rawURL,
 				OfficialURL:    officialURL,
 				Name:           name,
 				DescriptionRaw: desc,
-			})
+			}
+			if simURL, ok := names[normName(name)]; ok {
+				entry.PossibleDupByName = true
+				entry.SimilarExistingURL = simURL
+				fmt.Printf("     ⚠ nom proche d'une entrée existante: %s\n", simURL)
+			}
+			entries = append(entries, entry)
 		}
 	}
 
@@ -215,6 +233,61 @@ func loadCSVDomains(path string) (map[string]string, error) {
 		}
 	}
 	return domains, nil
+}
+
+// loadCSVNames returns a map of normalised tool name → stored URL, for name-based
+// duplicate detection (catches same tool under a different domain, e.g. opentofu.org
+// vs github.com/opentofu/opentofu).
+func loadCSVNames(path string) (map[string]string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	reader := csv.NewReader(f)
+	headers, err := reader.Read()
+	if err != nil {
+		return nil, err
+	}
+	urlIdx, nameIdx := -1, -1
+	for i, h := range headers {
+		switch h {
+		case "url":
+			urlIdx = i
+		case "name":
+			nameIdx = i
+		}
+	}
+	if urlIdx < 0 || nameIdx < 0 {
+		return nil, fmt.Errorf("missing 'url' or 'name' column in CSV")
+	}
+	names := make(map[string]string)
+	for {
+		row, err := reader.Read()
+		if err != nil {
+			break
+		}
+		if urlIdx >= len(row) || nameIdx >= len(row) {
+			continue
+		}
+		key := normName(row[nameIdx])
+		if key != "" {
+			names[key] = row[urlIdx]
+		}
+	}
+	return names, nil
+}
+
+// normName lowercases and strips everything but letters/digits, so "OpenTofu",
+// "opentofu", "Open Tofu" all collapse to the same key.
+func normName(name string) string {
+	var b strings.Builder
+	for _, r := range strings.ToLower(name) {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 func normURLKey(rawURL string) string {
