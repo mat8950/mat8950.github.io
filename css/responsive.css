@@ -8,7 +8,7 @@
 @media (min-width: 1440px) {
     .sidebar h2    { font-size: 0.7rem; }
     .folder-item   { padding: 0.6rem 0.85rem; font-size: 0.8rem; }
-    .bookmark-card { padding: 1.1rem 0; }
+    .bookmark-card { padding-block: 1.1rem; }
     .bookmark-title { font-size: 0.85rem; }
     .bookmark-url   { font-size: 0.7rem; }
     .bookmark-icon img { width: 26px; height: 26px; }
@@ -17,7 +17,7 @@
 @media (min-width: 1920px) {
     .sidebar h2    { font-size: 0.75rem; }
     .folder-item   { padding: 0.7rem 1rem; font-size: 0.88rem; }
-    .bookmark-card { padding: 1.25rem 0; }
+    .bookmark-card { padding-block: 1.25rem; }
     .bookmark-title { font-size: 0.92rem; }
     .bookmark-url   { font-size: 0.73rem; }
     .bookmark-icon img { width: 30px; height: 30px; }
@@ -27,7 +27,7 @@
 @media (min-width: 2560px) {
     .sidebar h2   { font-size: 0.85rem; }
     .folder-item  { padding: 0.85rem 1.2rem; font-size: 0.95rem; }
-    .bookmark-card { padding: 1.35rem 0; }
+    .bookmark-card { padding-block: 1.35rem; }
     .bookmark-title { font-size: 1rem; }
     .bookmark-url   { font-size: 0.78rem; }
     .bookmark-icon img { width: 36px; height: 36px; }
@@ -36,6 +36,12 @@
 
 @media (min-width: 3200px) {
     .bookmark-icon img { width: 42px; height: 42px; }
+}
+
+/* ---- ÉCRANS MOYENS : header sur une ligne, on gagne de la place ---- */
+@media (max-width: 1100px) {
+    #theme-label { display: none; }   /* la pastille de couleur suffit */
+    .header-controls { gap: 0.5rem; }
 }
 
 /* ---- TABLETTE ---- */
@@ -50,14 +56,41 @@
 @media (max-width: 768px) {
     .container { flex-direction: column; }
 
+    .container { min-height: 0; }
+
+    /* Sidebar en bloc au-dessus du contenu : ni collante ni pleine hauteur
+       (collante, elle restait coincée sous le header et masquait le contenu) */
     .sidebar {
         width: 100%;
+        position: static;
+        height: auto;
         border-right: none;
         border-bottom: 1px solid var(--border-color);
         max-height: 180px;
     }
 
-    #search { width: 140px; }
+    /* Header sur 2 lignes : titre + recherche pleine largeur, boutons en dessous (plus de débordement) */
+    header {
+        height: auto;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        padding: 0.75rem 1rem;
+    }
+    .header-controls {
+        flex-wrap: wrap;
+        width: 100%;
+    }
+    .search-wrapper { flex: 1 1 100%; }
+    #search { width: 100%; }
+
+    /* Anti-CLS : les badges (655 nouveautés, n favoris) arrivent après le CSV.
+       Place réservée dès le 1er affichage → les boutons ne changent pas de ligne → header de hauteur fixe */
+    .header-btn .badge { min-width: 2.6em; justify-content: center; }
+    .header-btn .badge.hidden { display: inline-flex; visibility: hidden; }
+
+    /* Anti-CLS : l'arbre occupe toute la hauteur visible de la sidebar avant le rendu,
+       l'import et le lien mentions sont donc déjà sous la ligne de flottaison (ils ne « sautent » plus) */
+    #folder-tree { min-height: 180px; }
 
     .bookmark-info {
         flex-direction: column;
@@ -72,6 +105,35 @@
 
     .header-controls { gap: 0.5rem; }
 
-    #theme-selector-btn { padding: 0.4rem 0.55rem; font-size: 0.6rem; }
-    #theme-label { display: none; }
+    #theme-selector-btn { padding: 0.4rem 0.55rem; font-size: 12px; }
+
+    /* Cibles tactiles ≥ 32px */
+    .header-btn, #theme-selector-btn, .sort-btn { min-height: 32px; }
+
+    /* Panneau stats : 2 KPI par ligne, colonnes empilées (débordait : 491px pour 362px) */
+    .stats-kpis { grid-template-columns: repeat(2, 1fr); }
+    .stats-cols { grid-template-columns: 1fr; }
+    .stats-bar-name { width: 90px; }
+    .timeline-entry:not(.fav-entry) { grid-template-columns: 72px 1fr; }
+    .fav-entry { grid-template-columns: auto 72px 1fr auto; }
+
+    /* Lisibilité mobile : aucun texte courant sous 12px (html = 13px, donc 0.6rem ≈ 8px sinon) */
+    header h1, #search, .header-btn, .theme-option, .badge,
+    .sidebar h2, .folder-item, .folder-count, .import-drop-zone, .legal-link,
+    #breadcrumb, .sort-label, .sort-btn, .date-option, .filter-chip, .filter-clear-all,
+    .bookmark-url, .bookmark-description, .bookmark-date, .tag-pill,
+    .gh-stars, .gh-stale, .gh-archived, .bookmark-total, .lazy-loader, #empty-state p,
+    .panel-header h2, .panel-action-btn, .panel-empty, .updates-tab,
+    .timeline-entry, .timeline-group-header, .tl-name a, .tl-url, .tl-desc, .tl-cat, .tl-date,
+    .suggestion-item, .suggestion-type, .similar-title, .similar-name, .similar-host, .similar-empty,
+    .stats-bar-name, .stats-bar-count, .stats-section h3, .kpi-label, .cloud-tag-count,
+    #audio-controls, #audio-toggle {
+        font-size: 12px;
+    }
+
+    .bookmark-title, .folder-name { font-size: 14px; }
+
+    .welcome-dialog { padding: 1.4rem 1.25rem 1.2rem; }
+    .welcome-dialog p, .welcome-hint, .welcome-btn { font-size: 13px; }
+    .welcome-dialog h2 { font-size: 17px; }
 }

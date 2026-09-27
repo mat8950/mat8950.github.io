@@ -55,7 +55,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Restaurer le dossier sauvegardé ou afficher l'accueil
     const savedFolder = localStorage.getItem('currentFolder');
-    if (savedFolder && savedFolder !== '') {
+    // Dossier mémorisé disparu (catégories renommées / réorganisées) → accueil
+    if (savedFolder && bookmarkData.folders.some(f => f.pathString === savedFolder)) {
         showFolder(savedFolder);
     } else {
         showFolder(null);
@@ -112,6 +113,23 @@ function parseCSVLine(line) {
     return result;
 }
 
+// Ordre stable des dossiers (le CSV est trié par date par bm-migrate, donc l'ordre d'apparition est arbitraire) :
+// catégories par nombre de marque-pages décroissant, sous-catégories par ordre alphabétique
+function sortFolders() {
+    const rootCount = new Map();
+    allBookmarks.forEach(b => {
+        const root = b.folderPath[0];
+        if (root) rootCount.set(root, (rootCount.get(root) || 0) + 1);
+    });
+    const byName = (a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' });
+    bookmarkData.folders.sort((a, b) => {
+        const ra = a.path[0], rb = b.path[0];
+        if (ra !== rb) return (rootCount.get(rb) || 0) - (rootCount.get(ra) || 0) || byName(ra, rb);
+        if (a.path.length !== b.path.length) return a.path.length - b.path.length;
+        return byName(a.name, b.name);
+    });
+}
+
 function buildFromCSV(rows) {
     bookmarkData.folders = [];
     bookmarkData.bookmarks = [];
@@ -160,6 +178,8 @@ function buildFromCSV(rows) {
         });
     });
 
+    sortFolders();
+
     console.log('Built from CSV:', { folders: bookmarkData.folders.length, bookmarks: allBookmarks.length });
 }
 
@@ -169,6 +189,30 @@ function addTagFilter(tag) {
         activeFilters.tags.push(t);
         displayBookmarks();
     }
+}
+
+// Index du bouton à re-focuser dans la barre après retrait d'un filtre (la barre est reconstruite)
+let filterFocusIndex = null;
+
+function removeFilter(index, apply) {
+    apply();
+    syncDateFilterUI();
+    filterFocusIndex = index;
+    displayBookmarks();
+}
+
+// Aligne le menu « Toutes dates » sur activeFilters.dateRange (après ✕ sur le chip ou « Tout effacer »)
+function syncDateFilterUI() {
+    const dateBtn   = document.getElementById('date-filter-btn');
+    const datePanel = document.getElementById('date-panel');
+    if (!dateBtn || !datePanel) return;
+    const value = activeFilters.dateRange ? String(activeFilters.dateRange) : '';
+    datePanel.querySelectorAll('.date-option').forEach(o => {
+        const on = o.dataset.days === value;
+        o.classList.toggle('active', on);
+        o.setAttribute('aria-selected', on ? 'true' : 'false');
+        if (on) dateBtn.textContent = o.textContent + ' ▾';
+    });
 }
 
 function renderFilterBar() {
@@ -183,21 +227,23 @@ function renderFilterBar() {
     bar.innerHTML = '';
 
     const hasFilters = activeFilters.tags.length > 0 || activeFilters.dateRange;
-    if (!hasFilters) { bar.classList.add('hidden'); return; }
-    bar.classList.remove('hidden');
+    bar.classList.toggle('hidden', !hasFilters);
+
+    let index = 0;
 
     // Date chip
     if (activeFilters.dateRange) {
         const label = { 30: '30 jours', 90: '90 jours', 365: '1 an' }[activeFilters.dateRange] || activeFilters.dateRange + 'j';
-        bar.appendChild(makeFilterChip('📅 ' + label, () => { activeFilters.dateRange = null; displayBookmarks(); }));
+        const i = index++;
+        bar.appendChild(makeFilterChip('📅 ' + label, () => removeFilter(i, () => { activeFilters.dateRange = null; })));
     }
 
     // Tag chips
     activeFilters.tags.forEach(tag => {
-        bar.appendChild(makeFilterChip('#' + tag, () => {
+        const i = index++;
+        bar.appendChild(makeFilterChip('#' + tag, () => removeFilter(i, () => {
             activeFilters.tags = activeFilters.tags.filter(t => t !== tag);
-            displayBookmarks();
-        }));
+        })));
     });
 
     // Clear all
@@ -205,15 +251,23 @@ function renderFilterBar() {
         const clearAll = document.createElement('button');
         clearAll.className = 'filter-clear-all';
         clearAll.textContent = 'Tout effacer';
-        clearAll.addEventListener('click', () => { activeFilters = { tags: [], dateRange: null }; displayBookmarks(); });
+        clearAll.addEventListener('click', () => removeFilter(0, () => { activeFilters = { tags: [], dateRange: null }; }));
         bar.appendChild(clearAll);
+    }
+
+    // Focus clavier : chip suivant (ou précédent), sinon le menu date quand plus aucun filtre
+    if (filterFocusIndex !== null) {
+        const buttons = bar.querySelectorAll('.filter-chip button, .filter-clear-all');
+        const target = buttons[Math.min(filterFocusIndex, buttons.length - 1)] || document.getElementById('date-filter-btn');
+        target?.focus();
+        filterFocusIndex = null;
     }
 }
 
 function makeFilterChip(label, onRemove) {
     const chip = document.createElement('span');
     chip.className = 'filter-chip';
-    chip.innerHTML = `${label} <button aria-label="Retirer le filtre ${label}">✕</button>`;
+    chip.innerHTML = `${escapeHtml(label)} <button aria-label="Retirer le filtre ${escapeHtml(label)}">✕</button>`;
     chip.querySelector('button').addEventListener('click', onRemove);
     return chip;
 }
@@ -256,13 +310,7 @@ function initSortBar() {
         datePanel.querySelectorAll('.date-option').forEach(opt => {
             opt.addEventListener('click', () => {
                 activeFilters.dateRange = opt.dataset.days ? parseInt(opt.dataset.days) : null;
-                datePanel.querySelectorAll('.date-option').forEach(o => {
-                    o.classList.remove('active');
-                    o.setAttribute('aria-selected', 'false');
-                });
-                opt.classList.add('active');
-                opt.setAttribute('aria-selected', 'true');
-                dateBtn.textContent = opt.textContent + ' ▾';
+                syncDateFilterUI();
                 datePanel.classList.remove('open');
                 dateBtn.setAttribute('aria-expanded', 'false');
                 displayBookmarks();
@@ -466,7 +514,6 @@ function createFolderItem(name, pathString, icon, level = 0) {
     // Accessibilité
     item.setAttribute('role', 'treeitem');
     item.setAttribute('tabindex', '0');
-    item.setAttribute('aria-label', `Dossier ${name}`);
 
     const iconSpan = document.createElement('span');
     iconSpan.className = 'icon';
@@ -631,8 +678,8 @@ function displayBookmarks() {
         });
     }
 
-    // Afficher les favoris en haut sur la page d'accueil
-    if (!currentFolder && !searchQuery) {
+    // Afficher les favoris en haut sur la page d'accueil (pas en recherche ni filtre actif)
+    if (!currentFolder && !searchQuery && !hasActiveFilters) {
         const favoriteBookmarks = getFavoriteBookmarks();
         if (favoriteBookmarks.length > 0) {
             const favSection = document.createElement('div');
@@ -665,7 +712,7 @@ function displayBookmarks() {
         subfolders.forEach(folder => {
             grid.appendChild(createFolderCard(folder));
         });
-    } else if (!searchQuery) {
+    } else if (!searchQuery && !hasActiveFilters) {
         // Show top-level folders on home
         const rootFolders = bookmarkData.folders.filter(f => f.path.length === 1);
         rootFolders.forEach(folder => {
@@ -774,7 +821,7 @@ function createFolderCard(folder) {
 function getFaviconUrl(bookmark) {
     try {
         const url = new URL(bookmark.url);
-        // Use Google's favicon service which retrieves the actual favicon from the site
+        // Service de favicons Google (pas de stockage dans le dépôt). Échec → onerror → 🔖
         return `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=64`;
     } catch {
         return null;
@@ -800,6 +847,12 @@ function createBookmarkCard(bookmark) {
     const faviconUrl = getFaviconUrl(bookmark);
     if (faviconUrl) {
         const img = document.createElement('img');
+        img.alt = '';
+        img.width = 32;
+        img.height = 32;
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        img.referrerPolicy = 'no-referrer';   // Google reçoit le domaine demandé, pas l'adresse de ce site
         img.src = faviconUrl;
         img.onerror = () => {
             icon.innerHTML = '🔖';
@@ -852,11 +905,9 @@ function createBookmarkCard(bookmark) {
                 pill.textContent = tag;
                 pill.addEventListener('click', (e) => {
                     e.stopPropagation();
+                    // Filtre seul (chip) : ne pas recopier le tag dans la recherche, sinon le ✕ du chip
+                    // laisse le texte et les résultats restent filtrés
                     addTagFilter(tag);
-                    const searchInput = document.getElementById('search');
-                    searchInput.value = tag;
-                    searchQuery = tag;
-                    displayBookmarks();
                 });
                 tagsRow.appendChild(pill);
             });
@@ -953,14 +1004,14 @@ function createBookmarkCard(bookmark) {
     card.appendChild(favoriteBtn);
 
     card.addEventListener('click', () => {
-        window.open(bookmark.url, '_blank');
+        if (safeHref(bookmark.url) !== '#') window.open(bookmark.url, '_blank', 'noopener');
     });
 
     // Navigation clavier
     card.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            window.open(bookmark.url, '_blank');
+            if (safeHref(bookmark.url) !== '#') window.open(bookmark.url, '_blank', 'noopener');
         }
     });
 
@@ -1004,9 +1055,9 @@ function showSimilarPopover(bookmark, anchor) {
             similar.map(b => {
                 let host = '';
                 try { host = new URL(b.url).hostname.replace('www.', ''); } catch {}
-                return `<a class="similar-item" href="${b.url}" target="_blank" rel="noopener">
-                    <span class="similar-name">${b.title}</span>
-                    <span class="similar-host">${host}</span>
+                return `<a class="similar-item" href="${safeHref(b.url)}" target="_blank" rel="noopener">
+                    <span class="similar-name">${escapeHtml(b.title)}</span>
+                    <span class="similar-host">${escapeHtml(host)}</span>
                 </a>`;
             }).join('');
     }
@@ -1267,7 +1318,18 @@ function hideSuggestions() {
 }
 
 function escapeHtml(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// URL sûre pour un href : http(s) uniquement (bloque javascript:, data:… d'un import piégé)
+function safeHref(url) {
+    try {
+        const u = new URL(url);
+        return (u.protocol === 'http:' || u.protocol === 'https:') ? escapeHtml(u.href) : '#';
+    } catch {
+        return '#';
+    }
 }
 
 // Navigation clavier dans les suggestions
@@ -1609,9 +1671,9 @@ function initFavoritesPanel() {
 
             const name = document.createElement('span');
             name.className = 'tl-name';
-            name.innerHTML = `<a href="${b.url}" target="_blank" rel="noopener">${b.title}</a>`
-                + `<span class="tl-url">${hostname}</span>`
-                + (descText ? `<span class="tl-desc">${descText}</span>` : '');
+            name.innerHTML = `<a href="${safeHref(b.url)}" target="_blank" rel="noopener">${escapeHtml(b.title)}</a>`
+                + `<span class="tl-url">${escapeHtml(hostname)}</span>`
+                + (descText ? `<span class="tl-desc">${escapeHtml(descText)}</span>` : '');
 
             const removeBtn = document.createElement('button');
             removeBtn.className = 'fav-remove-btn';
@@ -1755,17 +1817,16 @@ function renderTagCloud() {
         const pill = document.createElement('button');
         pill.className = 'cloud-tag';
         pill.style.fontSize = `${size}rem`;
-        pill.innerHTML = `${tag}<span class="cloud-tag-count">${n}</span>`;
+        pill.innerHTML = `${escapeHtml(tag)}<span class="cloud-tag-count">${n}</span>`;
         pill.title = `${n} outil${n > 1 ? 's' : ''} taggé${n > 1 ? 's' : ''} « ${tag} »`;
         pill.addEventListener('click', () => {
             document.getElementById('tags-panel').classList.add('hidden');
             document.getElementById('tags-panel').setAttribute('aria-hidden', 'true');
-            currentFolder = null;
             const searchInput = document.getElementById('search');
             if (searchInput) searchInput.value = '';
             searchQuery = '';
             activeFilters.tags = [tag.toLowerCase()];
-            displayBookmarks();
+            showFolder(null);
         });
         el.appendChild(pill);
     });
@@ -1877,7 +1938,7 @@ function renderStats() {
             <h3>Top dépôts par stars</h3>
             ${topStarred.map(r => `
                 <div class="stats-bar-row">
-                    <a class="stats-bar-name stats-link" href="${r.url}" target="_blank" rel="noopener">${r.name}</a>
+                    <a class="stats-bar-name stats-link" href="${safeHref(r.url)}" target="_blank" rel="noopener">${escapeHtml(r.name)}</a>
                     <div class="stats-bar-track"><div class="stats-bar-fill stats-bar-fill-star" style="width:${Math.round(r.stars/topStarred[0].stars*100)}%"></div></div>
                     <span class="stats-bar-count">★ ${formatStars(r.stars)}</span>
                 </div>`).join('')}
@@ -1900,7 +1961,7 @@ function renderStats() {
                 <h3>Top catégories</h3>
                 ${topCats.map(([name, n]) => `
                     <div class="stats-bar-row">
-                        <span class="stats-bar-name">${name}</span>
+                        <span class="stats-bar-name">${escapeHtml(name)}</span>
                         <div class="stats-bar-track"><div class="stats-bar-fill" style="width:${Math.round(n/topCats[0][1]*100)}%"></div></div>
                         <span class="stats-bar-count">${n}</span>
                     </div>`).join('')}
@@ -1909,7 +1970,7 @@ function renderStats() {
                 <h3>Top domaines</h3>
                 ${topDoms.map(([name, n]) => `
                     <div class="stats-bar-row">
-                        <span class="stats-bar-name">${name}</span>
+                        <span class="stats-bar-name">${escapeHtml(name)}</span>
                         <div class="stats-bar-track"><div class="stats-bar-fill" style="width:${Math.round(n/topDoms[0][1]*100)}%"></div></div>
                         <span class="stats-bar-count">${n}</span>
                     </div>`).join('')}
@@ -2026,8 +2087,8 @@ function initUpdatesPanel() {
         let hostname = '';
         try { hostname = new URL(b.url).hostname; } catch {}
         entry.innerHTML = `
-            <span class="tl-cat">${rootCat}</span>
-            <span class="tl-name">${isNew ? '<span class="tl-new-dot"></span>' : ''}<a href="${b.url}" target="_blank" rel="noopener">${b.title}</a><span class="tl-url">${hostname}</span></span>
+            <span class="tl-cat">${escapeHtml(rootCat)}</span>
+            <span class="tl-name">${isNew ? '<span class="tl-new-dot"></span>' : ''}<a href="${safeHref(b.url)}" target="_blank" rel="noopener">${escapeHtml(b.title)}</a><span class="tl-url">${escapeHtml(hostname)}</span></span>
         `;
         return entry;
     }

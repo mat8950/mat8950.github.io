@@ -1,16 +1,23 @@
-const CACHE = 'bookmarks-v2';
+const CACHE = 'bookmarks-v10';
+// Précache minimal pour l'offline. ambient.mp3 n'y est plus (4 Mo, chargé seulement au PLAY).
+// Polices : mises en cache à la volée. Favicons (Google, autre origine) : cache HTTP du navigateur.
 const ASSETS = [
     '/',
     '/index.html',
     '/script.js',
-    '/bookmarks.html',
-    '/bookmarks.csv',
-    '/ambient.mp3',
+    '/css/fonts.css',
     '/css/variables.css',
+    '/css/base.css',
+    '/css/background.css',
     '/css/layout.css',
     '/css/components.css',
-    '/css/background.css',
     '/css/themes.css',
+    '/css/responsive.css',
+    '/lib/three.min.js',
+    '/manifest.json',
+    '/favicon.ico',
+    '/icons/icon.svg',
+    '/bookmarks.csv',
 ];
 
 self.addEventListener('install', e => {
@@ -28,17 +35,27 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+    if (e.request.method !== 'GET') return;
+
     // Network-first pour bookmarks.html et bookmarks.csv (données fraîches si dispo)
     if (e.request.url.includes('bookmarks.html') || e.request.url.includes('bookmarks.csv')) {
         e.respondWith(
             fetch(e.request)
-                .then(res => { caches.open(CACHE).then(c => c.put(e.request, res.clone())); return res; })
+                .then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); return res; })
                 .catch(() => caches.match(e.request))
         );
         return;
     }
-    // Cache-first pour tout le reste
+
+    // Cache-first pour tout le reste ; réponses same-origin complètes (200, hors Range audio) mises en cache
     e.respondWith(
-        caches.match(e.request).then(cached => cached || fetch(e.request))
+        caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
+            const sameOrigin = new URL(e.request.url).origin === self.location.origin;
+            if (sameOrigin && res.status === 200 && !e.request.headers.has('range')) {
+                const copy = res.clone();
+                caches.open(CACHE).then(c => c.put(e.request, copy));
+            }
+            return res;
+        }))
     );
 });

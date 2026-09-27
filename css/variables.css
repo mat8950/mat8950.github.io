@@ -2,8 +2,7 @@
    VARIABLES — Polices + tokens CSS par thème
    ============================================== */
 
-/* ---- FONTS ---- */
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap');
+/* ---- FONTS : @font-face dans css/fonts.css (auto-hébergées) ---- */
 
 /* ---- DARK (défaut) ---- */
 :root {
@@ -19,7 +18,7 @@
     --text-secondary: #cccccc;
     --text-dim:       #888888;
     --text-highlight: #ffffff;
-    --text-muted:     #666666;
+    --text-muted:     #777777;   /* 4.7:1 sur #000 (WCAG AA) */
 
     /* Accent */
     --accent:           #ffffff;
@@ -36,6 +35,17 @@
 
     /* Layout */
     --sidebar-width: clamp(220px, 20vw, 500px);
+    --header-h: 3.75rem;   /* hauteur fixe du header desktop : sert d'offset à la sidebar collante */
+
+    /* États interactifs — surchargés par les thèmes clairs (un blanc à 5 % est invisible sur fond clair) */
+    --hover-bg:  rgba(255, 255, 255, 0.05);
+    --active-bg: rgba(255, 255, 255, 0.09);
+    --gold:      #e3b341;   /* favoris, étoiles GitHub */
+
+    /* Transitions UI : propriétés ciblées (pas de `transition: all`, qui anime aussi la mise en page) */
+    --ease-ui: 0.15s ease;
+    --transition-ui: color var(--ease-ui), background-color var(--ease-ui), border-color var(--ease-ui),
+                     opacity var(--ease-ui), transform var(--ease-ui), box-shadow var(--ease-ui);
 
     /* Police — terminal */
     --font-body: 'Fira Code', 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
@@ -54,7 +64,7 @@ body.light-mode:not([data-theme]) {
     --text-secondary: #222222;
     --text-dim:       #555555;
     --text-highlight: #000000;
-    --text-muted:     #888888;
+    --text-muted:     #727272;   /* 4.6:1 sur #fafaf8 */
     --accent:           #000000;
     --accent-secondary: #444444;
     --accent-dim:       rgba(0, 0, 0, 0.07);
@@ -62,6 +72,9 @@ body.light-mode:not([data-theme]) {
     --border-bright: rgba(0, 0, 0, 0.22);
     --border-strong: rgba(0, 0, 0, 0.38);
     --glow-white:    0 0 20px rgba(0, 0, 0, 0.06);
+    --hover-bg:  rgba(0, 0, 0, 0.04);
+    --active-bg: rgba(0, 0, 0, 0.07);
+    --gold:      #8a5c00;   /* 5.6:1 sur #fafaf8 */
     /* Police — sans-serif humaniste */
     --font-body: 'Inter', 'Helvetica Neue', Arial, sans-serif;
     --font-mono: 'Fira Code', 'Consolas', monospace;
@@ -90,9 +103,9 @@ body[data-theme="apple-dark"] {
     /* Texte — SF Pro opacités */
     --text-primary:   rgba(255, 255, 255, 0.95);
     --text-secondary: rgba(255, 255, 255, 0.75);
-    --text-dim:       rgba(255, 255, 255, 0.45);
+    --text-dim:       rgba(255, 255, 255, 0.55);
     --text-highlight: #ffffff;
-    --text-muted:     rgba(255, 255, 255, 0.28);
+    --text-muted:     rgba(255, 255, 255, 0.46);   /* 4.7:1 */
 
     /* Accent — Blue Apple */
     --accent:           #2997ff;
@@ -161,13 +174,13 @@ body[data-theme="apple-light"] {
 
     /* Texte — léger tint bleu-noir (pas pur black) */
     --text-primary:   rgba(10, 10, 30, 0.87);
-    --text-secondary: rgba(10, 15, 40, 0.62);
-    --text-dim:       rgba(20, 20, 60, 0.42);
+    --text-secondary: rgba(10, 15, 40, 0.78);
+    --text-dim:       rgba(20, 20, 60, 0.70);
     --text-highlight: #05050f;
-    --text-muted:     rgba(30, 30, 80, 0.30);
+    --text-muted:     rgba(30, 30, 80, 0.65);   /* 4.6:1 */
 
     /* Accent — Blue Apple */
-    --accent:           #007aff;
+    --accent:           #0064d1;   /* bleu Apple assombri : 4.7:1 sur #e8eaf2 */
     --accent-secondary: #0071e3;
     --accent-dim:       rgba(0, 122, 255, 0.13);
 
@@ -178,6 +191,9 @@ body[data-theme="apple-light"] {
     --border-glass:   rgba(255, 255, 255, 0.90);  /* specular haut */
     --border-inner:   rgba(255, 255, 255, 0.98);  /* inner highlight */
     --border-bottom:  rgba(0, 10, 80, 0.09);      /* ombre bord bas */
+    --hover-bg:  rgba(0, 20, 100, 0.05);
+    --active-bg: rgba(0, 20, 100, 0.08);
+    --gold:      #8a5c00;
 
     /* Shadows multi-couches — profondeur verre réelle */
     --shadow-glass:
@@ -253,7 +269,7 @@ body[data-theme="dracula"] {
     --text-secondary: #e2e0d8;
     --text-dim:       #bd93f9;
     --text-highlight: #f8f8f2;
-    --text-muted:     #6272a4;
+    --text-muted:     #8692b9;   /* comment Dracula éclairci : 4.6:1 */
     --accent:           #ff79c6;
     --accent-secondary: #bd93f9;
     --accent-dim:       rgba(255, 121, 198, 0.12);
@@ -283,7 +299,7 @@ body[data-theme="catppuccin"] {
     --text-secondary:    #bac2de;
     --text-dim:          #a6adc8;
     --text-highlight:    #cdd6f4;
-    --text-muted:        #585b70;
+    --text-muted:        #9399b2;   /* overlay2 Catppuccin : 5.8:1 */
     --accent:            #cba6f7;
     --accent-secondary:  #89b4fa;
     --accent-dim:        rgba(203, 166, 247, 0.15);
@@ -313,7 +329,7 @@ body[data-theme="gruvbox"] {
     --text-secondary:    #d5c4a1;
     --text-dim:          #a89984;
     --text-highlight:    #ebdbb2;
-    --text-muted:        #665c54;
+    --text-muted:        #958f89;   /* 4.6:1 sur #282828 */
     --accent:            #fabd2f;
     --accent-secondary:  #fe8019;
     --accent-dim:        rgba(250, 189, 47, 0.15);

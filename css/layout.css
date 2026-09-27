@@ -44,7 +44,7 @@
     cursor: pointer;
     font-family: var(--font-mono);
     font-size: 0.65rem;
-    transition: all 0.2s ease;
+    transition: var(--transition-ui);
     text-transform: uppercase;
     letter-spacing: 1px;
 }
@@ -52,13 +52,13 @@
 #audio-toggle:hover {
     border-color: var(--text-primary);
     color: var(--text-primary);
-    background: rgba(255,255,255,0.05);
+    background: var(--hover-bg);
 }
 
 #audio-toggle.playing {
     color: var(--text-primary);
     border-color: var(--text-primary);
-    background: rgba(255,255,255,0.10);
+    background: var(--active-bg);
 }
 
 #volume-slider {
@@ -73,10 +73,20 @@
 #volume-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 8px; height: 8px;
+    width: 10px; height: 10px;
     background: var(--text-primary);
     cursor: pointer;
 }
+
+/* Firefox : même curseur carré (sinon pouce natif sur une piste de 2px) */
+#volume-slider::-moz-range-thumb {
+    width: 10px; height: 10px;
+    background: var(--text-primary);
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+}
+#volume-slider::-moz-range-track { background: var(--border-bright); height: 2px; }
 
 /* ---- HEADER ---- */
 header {
@@ -84,10 +94,12 @@ header {
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border-color);
-    padding: 0.75rem 1.5rem;
+    padding: 0 1.5rem;
+    height: var(--header-h);   /* fixe : la sidebar se colle juste dessous (mobile : auto) */
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 1rem;
     position: sticky;
     top: 0;
     z-index: 100;
@@ -104,6 +116,8 @@ header h1 {
     align-items: center;
     gap: 0.5rem;
     overflow: hidden;
+    white-space: nowrap;   /* « MARQUE-PAGES » ne se coupe plus au tiret */
+    flex-shrink: 0;
 }
 
 header h1 span {
@@ -149,7 +163,7 @@ header h1::after {
     font-size: 0.75rem;
     width: clamp(140px, 18vw, 280px);
     outline: none;
-    transition: all 0.2s ease;
+    transition: var(--transition-ui);
 }
 
 #search::placeholder {
@@ -177,7 +191,7 @@ header h1::after {
     color: var(--text-secondary);
     font-family: var(--font-mono);
     font-size: 0.65rem;
-    transition: all 0.2s ease;
+    transition: var(--transition-ui);
     text-transform: uppercase;
     letter-spacing: 1px;
     display: flex;
@@ -249,7 +263,7 @@ body[data-theme="gruvbox"]     #theme-selector-btn .btn-swatch { background: #fa
 }
 
 .theme-option:hover {
-    background: rgba(255,255,255,0.06);
+    background: var(--hover-bg);
     color: var(--text-primary);
 }
 
@@ -280,7 +294,8 @@ body[data-theme="gruvbox"]     #theme-selector-btn .btn-swatch { background: #fa
 /* ---- CONTAINER ---- */
 .container {
     display: flex;
-    min-height: calc(100vh - 52px);
+    min-height: calc(100vh - var(--header-h));
+    min-height: calc(100dvh - var(--header-h));
     position: relative;
     z-index: 1;
 }
@@ -294,9 +309,11 @@ body[data-theme="gruvbox"]     #theme-selector-btn .btn-swatch { background: #fa
     border-right: 1px solid var(--border-color);
     padding: 1.5rem 1.25rem;
     overflow-y: auto;
-    height: calc(100vh - 52px);
+    height: calc(100vh - var(--header-h));
+    height: calc(100dvh - var(--header-h));
     position: sticky;
-    top: 0;
+    top: var(--header-h);   /* sous le header collant (avant : top 0 → 59px masqués, trou en bas) */
+    overscroll-behavior: contain;
     transition: background-color 0.35s ease, border-color 0.3s ease;
 }
 
@@ -327,7 +344,7 @@ body[data-theme="gruvbox"]     #theme-selector-btn .btn-swatch { background: #fa
     letter-spacing: 1px;
     text-align: center;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: var(--transition-ui);
     user-select: none;
 }
 
@@ -335,7 +352,7 @@ body[data-theme="gruvbox"]     #theme-selector-btn .btn-swatch { background: #fa
 .import-drop-zone.drag-over {
     border-color: var(--text-primary);
     color: var(--text-primary);
-    background: rgba(255,255,255,0.04);
+    background: var(--hover-bg);
 }
 
 .import-drop-zone.drag-over {
@@ -346,6 +363,24 @@ body[data-theme="gruvbox"]     #theme-selector-btn .btn-swatch { background: #fa
     border-color: var(--text-primary);
     color: var(--text-primary);
     border-style: solid;
+}
+
+/* ---- LIEN MENTIONS LÉGALES (bas de sidebar) ---- */
+.legal-link {
+    display: block;
+    margin-top: 1rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.5px;
+    text-align: center;
+    text-decoration: none;
+}
+
+.legal-link:hover,
+.legal-link:focus-visible {
+    color: var(--text-primary);
+    text-decoration: underline;
 }
 
 #collapse-all-btn {
@@ -379,10 +414,15 @@ body[data-theme="gruvbox"]     #theme-selector-btn .btn-swatch { background: #fa
 }
 
 /* ---- SCROLLBAR ---- */
-::-webkit-scrollbar       { width: 3px; height: 3px; }
+::-webkit-scrollbar       { width: 6px; height: 6px; }   /* 3px : quasi impossible à attraper */
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb       { background: var(--border-bright); }
+::-webkit-scrollbar-thumb       { background: var(--border-bright); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-primary); }
+
+/* Firefox (pas de ::-webkit-scrollbar) */
+@supports not selector(::-webkit-scrollbar) {
+    * { scrollbar-width: thin; scrollbar-color: var(--border-bright) transparent; }
+}
 
 /* ---- SIDEBAR COLLAPSED ---- */
 .sidebar.collapsed {
@@ -418,7 +458,7 @@ body[data-theme="gruvbox"]     #theme-selector-btn .btn-swatch { background: #fa
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--border-bright);
     padding: 1.5rem;
-    min-width: 340px;
+    min-width: min(340px, 100%);
     max-width: 480px;
     width: 90vw;
     animation: slideUp 0.2s ease;

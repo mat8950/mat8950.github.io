@@ -1,0 +1,90 @@
+/* ==============================================
+   PAGE — Pages statiques simples (404, mentions légales)
+   Autonome : ne dépend pas de styles.css ni de script.js
+   ============================================== */
+
+@import url('fonts.css');
+
+:root {
+    --bg: #000000;
+    --surface: #0d0d0d;
+    --border: #262626;
+    --text: #ffffff;
+    --text-2: #cccccc;
+    --text-3: #9a9a9a;
+    --link: #ffffff;
+    --grid: rgba(255, 255, 255, 0.06);
+}
+
+/* Thèmes clairs du site (light, apple-light) : posé par le script inline de chaque page */
+html[data-theme="light"],
+html[data-theme="apple-light"] {
+    --bg: #fafaf8;
+    --surface: #ffffff;
+    --border: #dddddd;
+    --text: #000000;
+    --text-2: #222222;
+    --text-3: #555555;
+    --link: #000000;
+    --grid: rgba(0, 0, 0, 0.06);
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { font-size: clamp(15px, 0.3vw + 13px, 18px); }
+
+body {
+    min-height: 100vh;
+    background-color: var(--bg);
+    background-image:
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+    color: var(--text-2);
+    font-family: 'Fira Code', 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+    line-height: 1.7;
+    padding: 3rem 1rem;
+}
+
+main {
+    max-width: 46rem;
+    margin: 0 auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2.5rem clamp(1.25rem, 5vw, 3rem);
+}
+
+h1 { color: var(--text); font-size: 1.8rem; line-height: 1.2; margin-bottom: 0.5rem; }
+h2 { color: var(--text); font-size: 1.15rem; margin: 2rem 0 0.5rem; }
+p, ul { margin-bottom: 0.9rem; }
+ul { padding-left: 1.3rem; }
+li { margin-bottom: 0.3rem; }
+strong { color: var(--text); }
+code { font-size: 0.9em; color: var(--text); }
+
+a { color: var(--link); text-underline-offset: 3px; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+.muted { color: var(--text-3); font-size: 0.9rem; }
+
+.back {
+    display: inline-block;
+    margin-top: 1.5rem;
+    padding: 0.6rem 1.2rem;
+    border: 1px solid var(--text);
+    border-radius: 8px;
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 600;
+}
+.back:hover { background: var(--text); color: var(--bg); }
+
+.code-404 {
+    font-size: clamp(4rem, 18vw, 8rem);
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text);
+    letter-spacing: -0.05em;
+}

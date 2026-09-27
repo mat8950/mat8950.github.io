@@ -7,7 +7,12 @@
    Résultat : 13px @768px → 15px @1080p → 17px @1440p → 22px @3200p */
 html {
     font-size: clamp(13px, 0.43vw + 9.7px, 22px);
+    color-scheme: dark;   /* contrôles natifs (range, scrollbars Firefox) assortis au thème */
 }
+
+/* Thèmes clairs : data-theme est posé sur body, :has() remonte l'info à la racine */
+html:has(> body[data-theme="light"]),
+html:has(> body[data-theme="apple-light"]) { color-scheme: light; }
 
 /* ---- RESET ---- */
 *, *::before, *::after {
@@ -23,6 +28,7 @@ html {
     padding: 0; margin: -1px;
     overflow: hidden;
     clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
     white-space: nowrap;
     border: 0;
 }
@@ -49,9 +55,11 @@ body {
     background: var(--bg-terminal);
     color: var(--text-primary);
     min-height: 100vh;
+    min-height: 100dvh;   /* mobile : ignore la barre d'adresse rétractable */
     position: relative;
     overflow-x: hidden;
     line-height: 1.6;
+    accent-color: var(--accent);
     -webkit-font-smoothing: auto;
     transition: background-color 0.35s ease, color 0.2s ease;
 }
@@ -83,7 +91,7 @@ body::before {
     pointer-events: none;
     z-index: 9999;
 }
-body[data-theme^="apple"] body::before { opacity: 0; }
+body[data-theme^="apple"]::before { opacity: 0; }   /* verre Apple : pas de grain (l'ancien sélecteur « body body » ne ciblait rien) */
 
 /* ---- SÉLECTION ---- */
 ::selection {
@@ -136,4 +144,19 @@ body[data-theme^="apple"] body::before { opacity: 0; }
 @keyframes fadeInContent {
     from { opacity: 0; }
     to   { opacity: 1; }
+}
+
+/* ---- MOUVEMENT RÉDUIT (réglage système) ----
+   Animations et transitions quasi instantanées. Les cartes gardent leur état final
+   (animation « forwards » → opacité 1). Le fond Three.js n'est pas lancé (index.html). */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-delay: 0s !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+    header h1::after, #empty-state::after { animation: none !important; }   /* curseur « _ » fixe */
+    .floating-particles, .vertical-lines { display: none; }
 }

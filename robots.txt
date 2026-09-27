@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://mat8950.github.io/sitemap.xml

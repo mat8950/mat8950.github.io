@@ -64,13 +64,7 @@ body.light-mode:not([data-theme]) .bookmark-card:hover .bookmark-title,
 body.light-mode:not([data-theme]) .bookmark-card:hover::after { color: #000; }
 
 body[data-theme="light"] .bookmark-card:hover .bookmark-url,
-body.light-mode:not([data-theme]) .bookmark-card:hover .bookmark-url {
-    color: rgba(0,0,0,0.6);
-    opacity: 1;
-}
-
-body[data-theme="light"] .audio-controls,
-body.light-mode:not([data-theme]) .audio-controls { background: transparent; }
+body.light-mode:not([data-theme]) .bookmark-card:hover .bookmark-url { color: var(--text-dim); }
 
 body[data-theme="light"] #audio-toggle,
 body.light-mode:not([data-theme]) #audio-toggle {
@@ -106,24 +100,7 @@ body.light-mode:not([data-theme]) .folder-item.keyboard-selected {
     outline-color: #000;
 }
 
-body[data-theme="light"] .favorites-header,
-body.light-mode:not([data-theme]) .favorites-header {
-    color: #b8860b;
-    border-bottom-color: rgba(184,134,11,0.3);
-}
-
-body[data-theme="light"] .favorites-grid .bookmark-card,
-body.light-mode:not([data-theme]) .favorites-grid .bookmark-card {
-    border-bottom-color: rgba(184,134,11,0.1);
-}
-
-body[data-theme="light"] .favorite-btn:hover,
-body[data-theme="light"] .favorite-btn.active,
-body.light-mode:not([data-theme]) .favorite-btn:hover,
-body.light-mode:not([data-theme]) .favorite-btn.active { color: #b8860b; }
-
-body[data-theme="light"] .theme-option:hover,
-body.light-mode:not([data-theme]) .theme-option:hover { background: rgba(0,0,0,0.05); }
+/* favoris, survols : couverts par les tokens --gold / --hover-bg du thème light */
 
 /* ==============================================
    APPLE — LIQUID GLASS (dark + light partagés)
@@ -151,7 +128,6 @@ body[data-theme^="apple"] header {
     -webkit-backdrop-filter: var(--blur-regular);
     border-bottom: 1px solid var(--border-glass);
     box-shadow: var(--shadow-glass);
-    position: relative;
 }
 
 /* Specular highlight haut du header */
@@ -193,7 +169,6 @@ body[data-theme^="apple"] .sidebar {
     backdrop-filter: var(--blur-regular);
     -webkit-backdrop-filter: var(--blur-regular);
     border-right: 1px solid var(--border-glass);
-    position: relative;
 }
 
 /* Inner glow droit de la sidebar */
@@ -239,8 +214,8 @@ body[data-theme^="apple"] .folder-item.has-children::after {
     content: '›';
     font-size: 1.1rem;
     font-weight: 300;
+    line-height: 1;
     color: var(--text-muted);
-    margin-left: auto;
     transition: transform 0.2s ease;
 }
 
@@ -381,10 +356,7 @@ body[data-theme^="apple"] .bookmark-card:hover {
 
 body[data-theme^="apple"] .bookmark-card:hover::after { color: var(--accent); }
 body[data-theme^="apple"] .bookmark-card:hover .bookmark-title { color: var(--accent); }
-body[data-theme^="apple"] .bookmark-card:hover .bookmark-url {
-    color: var(--accent-secondary);
-    opacity: 0.75;
-}
+body[data-theme^="apple"] .bookmark-card:hover .bookmark-url { color: var(--accent); }
 
 /* Keyboard selection */
 body[data-theme^="apple"] .bookmark-card.keyboard-selected {
@@ -415,7 +387,6 @@ body[data-theme^="apple"] .bookmark-url {
     font-size: 0.72rem;
     letter-spacing: 0;
     color: var(--text-muted);
-    opacity: 0.7;
 }
 
 /* ---- SEARCH — glass pill ---- */
@@ -492,6 +463,97 @@ body[data-theme^="apple"] .theme-option:hover {
 }
 
 body[data-theme^="apple"] .theme-option.active { color: var(--accent); font-weight: 500; }
+
+/* ---- HEADER BUTTONS — glass pill (comme recherche et thème) ---- */
+body[data-theme^="apple"] .header-btn {
+    background: var(--glass-regular);
+    backdrop-filter: var(--blur-thin);
+    -webkit-backdrop-filter: var(--blur-thin);
+    border: 1px solid var(--border-glass);
+    border-radius: 100px;
+    font-size: 0.8rem;
+    letter-spacing: -0.01em;
+    text-transform: none;
+    padding: 0.35rem 0.85rem;
+    box-shadow: inset 0 1px 0 var(--border-inner), var(--shadow-card);
+}
+
+body[data-theme^="apple"] .header-btn:hover {
+    background: var(--glass-thick);
+    border-color: var(--border-bright);
+    color: var(--accent);
+}
+
+/* ---- TAGS — capsules ---- */
+body[data-theme^="apple"] .tag-pill {
+    border-radius: 100px;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0.66rem;
+    padding: 0.05rem 0.5rem;
+}
+
+body[data-theme^="apple"] .tag-pill:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-dim);
+}
+
+/* ---- PANNEAUX — feuille de verre arrondie ---- */
+body[data-theme^="apple"] .panel-inner {
+    background: var(--glass-thick);
+    backdrop-filter: var(--blur-thick);
+    -webkit-backdrop-filter: var(--blur-thick);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-glass);
+}
+
+body[data-theme^="apple"] .panel-header h2 {
+    text-transform: none;
+    letter-spacing: -0.01em;
+    font-size: 0.95rem;
+}
+
+body[data-theme^="apple"] .panel-close,
+body[data-theme^="apple"] .panel-action-btn,
+body[data-theme^="apple"] .updates-tab { border-radius: 100px; }
+
+/* ---- POPUP DE BIENVENUE — feuille de verre ---- */
+body[data-theme^="apple"] .welcome-dialog {
+    background: var(--glass-thick);
+    backdrop-filter: var(--blur-thick);
+    -webkit-backdrop-filter: var(--blur-thick);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-glass);
+}
+
+body[data-theme^="apple"] .welcome-dialog h2 {
+    font-family: var(--font-display, var(--font-body));
+    text-transform: none;
+    letter-spacing: var(--tracking-display);
+    font-size: 1.3rem;
+}
+
+body[data-theme^="apple"] .welcome-dialog h2::before { content: none; }
+
+body[data-theme^="apple"] .welcome-btn {
+    border-radius: 100px;
+    font-family: var(--font-body);
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0.85rem;
+}
+
+body[data-theme^="apple"] .welcome-btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+body[data-theme^="apple"] .welcome-btn-primary:hover { filter: brightness(1.1); }
+body[data-theme="apple-dark"] .welcome-btn-primary { color: var(--bg-primary); }   /* blanc sur #2997ff = 3:1, foncé = 6.9:1 */
 
 /* ---- AUDIO CONTROLS — glass pill ---- */
 body[data-theme^="apple"] #audio-controls {
@@ -587,11 +649,11 @@ body[data-theme="apple-light"] ::-webkit-scrollbar-thumb:hover {
 }
 
 /* Sort bar — glass pills */
-body[data-theme="apple-light"] .sort-bar {
+body[data-theme^="apple"] .sort-bar {
     gap: 0.3rem;
 }
 
-body[data-theme="apple-light"] .sort-btn {
+body[data-theme^="apple"] .sort-btn {
     font-family: var(--font-body);
     font-size: 0.78rem;
     letter-spacing: 0;
@@ -606,24 +668,24 @@ body[data-theme="apple-light"] .sort-btn {
     padding: 0.3rem 0.8rem;
 }
 
-body[data-theme="apple-light"] .sort-btn:hover {
+body[data-theme^="apple"] .sort-btn:hover {
     background: var(--glass-thick);
     color: var(--text-primary);
     border-color: var(--border-bright);
 }
 
-body[data-theme="apple-light"] .sort-btn.active {
+body[data-theme^="apple"] .sort-btn.active {
     background: var(--accent-dim);
     border-color: var(--accent);
     color: var(--accent);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 0 0 1px var(--accent-dim);
+    box-shadow: inset 0 1px 0 var(--border-inner), 0 0 0 1px var(--accent-dim);
 }
 
-body[data-theme="apple-light"] #date-filter-btn {
+body[data-theme^="apple"] #date-filter-btn {
     border-radius: 100px;
 }
 
-body[data-theme="apple-light"] .sort-label {
+body[data-theme^="apple"] .sort-label {
     font-family: var(--font-body);
     font-size: 0.75rem;
     text-transform: none;
@@ -639,7 +701,7 @@ body[data-theme="apple-light"] #collapse-all-btn {
 }
 
 /* Filter chips — glass style */
-body[data-theme="apple-light"] .filter-chip {
+body[data-theme^="apple"] .filter-chip {
     border-radius: 100px;
     background: var(--accent-dim);
     border-color: var(--accent);
@@ -650,7 +712,7 @@ body[data-theme="apple-light"] .filter-chip {
 }
 
 /* Stats KPIs — glass cards */
-body[data-theme="apple-light"] .stats-kpi {
+body[data-theme^="apple"] .stats-kpi {
     background: var(--glass-card);
     border: 1px solid var(--border-glass);
     border-radius: var(--radius-md);
@@ -701,7 +763,6 @@ body[data-theme="nord"] .bookmark-card:hover::after { color: var(--accent); }
 
 body[data-theme="nord"] .bookmark-card:hover .bookmark-url {
     color: var(--accent-secondary);
-    opacity: 0.8;
 }
 
 body[data-theme="nord"] .bookmark-card.keyboard-selected {
@@ -742,7 +803,6 @@ body[data-theme="dracula"] .bookmark-card:hover::after { color: var(--accent); }
 
 body[data-theme="dracula"] .bookmark-card:hover .bookmark-url {
     color: var(--accent-secondary);
-    opacity: 0.8;
 }
 
 body[data-theme="dracula"] .bookmark-card.keyboard-selected {
@@ -817,7 +877,6 @@ body[data-theme="catppuccin"] .bookmark-card:hover::after { color: var(--accent)
 
 body[data-theme="catppuccin"] .bookmark-card:hover .bookmark-url {
     color: var(--accent-secondary);
-    opacity: 0.85;
 }
 
 body[data-theme="catppuccin"] .bookmark-card.keyboard-selected {
@@ -863,7 +922,6 @@ body[data-theme="gruvbox"] .bookmark-card:hover::after { color: var(--accent); }
 
 body[data-theme="gruvbox"] .bookmark-card:hover .bookmark-url {
     color: var(--accent-secondary);
-    opacity: 0.85;
 }
 
 body[data-theme="gruvbox"] .bookmark-card.keyboard-selected {
