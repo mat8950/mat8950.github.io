@@ -47,6 +47,7 @@ type gitHubRepo struct {
 }
 
 func main() {
+	loadDotEnv(".env")
 	lines, err := readLines(inputFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[ERROR] reading %s: %v\n", inputFile, err)
@@ -288,6 +289,37 @@ func normName(name string) string {
 		}
 	}
 	return b.String()
+}
+
+// loadDotEnv lit un fichier .env (format KEY=VALUE, une variable par ligne) et
+// définit les variables d'environnement absentes. N'écrase jamais une variable
+// déjà présente (GITHUB_TOKEN=ghp_xxx go run ... reste prioritaire). Silencieux
+// si le fichier n'existe pas.
+func loadDotEnv(path string) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		line = strings.TrimPrefix(line, "export ")
+		line = strings.TrimPrefix(line, "$")
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		key, value, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		key = strings.TrimSpace(key)
+		value = strings.Trim(strings.TrimSpace(value), `"'`)
+		if key == "" {
+			continue
+		}
+		if _, exists := os.LookupEnv(key); !exists {
+			os.Setenv(key, value)
+		}
+	}
 }
 
 func normURLKey(rawURL string) string {
