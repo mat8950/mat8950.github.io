@@ -3,8 +3,9 @@
 ## 1. Contexte du projet
 
 Site statique de gestion de marque-pages techniques, déployé sur **GitHub Pages** (branche `main`).
-Test local : `docker compose up -d` → http://localhost:8080 (nginx avec volumes)
-Test avec build Docker : `docker compose -f compose.yml up` → http://localhost:80
+Déploiement : `.github/workflows/static.yml` publie une **liste blanche** de fichiers (dossier `_site/`). Tout nouveau fichier servi par le site doit y être ajouté (et dans `Dockerfile`), sinon il n'est pas en ligne.
+Test local : `docker compose -f docker-compose.yml up -d` → http://localhost:8080 (nginx avec volumes, config nginx par défaut : pas de page 404 perso)
+Test avec build Docker (proche prod) : `docker compose up -d --build` → http://localhost (sans `-f`, Compose prend `compose.yml` en priorité sur `docker-compose.yml`)
 
 **Stack** : HTML / CSS / JS vanilla + Three.js (fond 3D WebGL) + `bookmarks.html` (format Netscape)
 
@@ -20,9 +21,9 @@ Test avec build Docker : `docker compose -f compose.yml up` → http://localhost
 
 | Fichier | Rôle |
 |---|---|
-| `index.html` | Structure + scripts audio, Three.js, persistance localStorage, panels, thème |
-| `styles.css` | 7 lignes `@import` vers `css/` — ne pas éditer directement |
-| `css/variables.css` | Variables CSS + tokens Glass Apple + Google Fonts import |
+| `index.html` | Structure + scripts audio, Three.js, persistance localStorage, panels, thème. Charge directement les 8 fichiers `css/` (ordre = cascade : fonts → variables → base → background → layout → components → themes → responsive) |
+| `css/fonts.css` | `@font-face` des polices auto-hébergées (`fonts/`, latin + latin-ext) — plus aucun appel Google Fonts |
+| `css/variables.css` | Variables CSS + tokens Glass Apple (`--text-muted` calé à ≥ 4.5:1 de contraste par thème) |
 | `css/base.css` | Reset, typographie fluide (`clamp`), body, animations |
 | `css/background.css` | Fond CSS de fallback + overrides canvas par thème |
 | `css/layout.css` | Header, sidebar, audio, recherche, sélecteur de thème |
@@ -47,7 +48,12 @@ Test avec build Docker : `docker compose -f compose.yml up` → http://localhost
 | `Dockerfile` | Image nginx:stable-alpine avec copie des fichiers statiques |
 | `nginx.conf` | Config nginx personnalisée |
 | `manifest.json` | PWA manifest |
-| `sw.js` | Service Worker (cache offline) |
+| `sw.js` | Service Worker (cache offline) — incrémenter `CACHE` à chaque changement d'assets |
+| `404.html` / `mentions-legales.html` | Pages statiques autonomes (style `css/page.css`, pas de `script.js`) |
+| `robots.txt` / `sitemap.xml` | SEO — mettre à jour `sitemap.xml` si une page est ajoutée |
+| `favicon.ico` / `icons/` / `og-image.png` | Favicon, icônes PWA (SVG + PNG + maskable + apple-touch), image de partage 1200×630 |
+| `fonts/` / `lib/three.min.js` | Polices woff2 et Three.js r128 auto-hébergés (pas de CDN). Ne pas nommer un dossier `vendor/` : Go le prend pour du vendoring |
+| Favicons des marque-pages | Chargés à l'affichage depuis `www.google.com/s2/favicons` (`referrerpolicy=no-referrer`), rien n'est stocké dans le dépôt. Seules les icônes du site (`favicon.ico`, `icons/`) sont versionnées |
 
 ---
 
@@ -129,59 +135,86 @@ Grep pattern: "domaine.com" dans bookmarks.csv
 
 **Règle : catégoriser selon le cas d'usage PRINCIPAL, pas les capacités secondaires.**
 
+Arborescence réorganisée le 2026-09-21 : 12 catégories, toutes avec sous-catégories (pas de lien « à la racine » d'une catégorie). Le frontend trie les catégories par nombre de liens et les sous-catégories par ordre alphabétique : l'ordre dans le CSV / HTML n'a pas d'importance.
+
 | Si l'outil est… | Catégorie |
 |---|---|
-| Logs, traces, métriques, alertes, APM | Développement > Monitoring & Observability |
-| Framework web, SSR, générateur de sites, composants UI | Développement > Frameworks Frontend |
-| Langage de programmation, shell, runtime | Développement > Langages & Shells |
-| Terminal, éditeur de code, IDE, outils CLI shell | Développement > Éditeurs & IDE ou UI/Terminal |
-| CI/CD, pipeline, orchestration de tâches, GitOps | Développement > CI/CD & Automation |
-| IaC, provisioning, config management | Développement > Infrastructure as Code |
-| Docker, K8s, conteneurs, runtime OCI, Tailscale+Docker | Développement > Conteneurs & Orchestration |
-| PaaS self-hosted, déploiement simplifié | Développement > Platform Engineering |
-| LLM, IA générative, TTS, STT, vision, inférence locale | IA & Machine Learning > Plateformes & Modèles |
-| Agent IA de dev, MCP server, skill, coding assistant | IA & Machine Learning > Agents & Outils IA de dev |
-| Automatisation IA, templates de workflows | IA & Machine Learning > Workflows & Automation IA |
-| SQL client, ORM, migration, admin DB | Bases de données > Outils DB |
+| Assistant conversationnel, moteur de recherche IA, assistant perso | IA & Machine Learning > Assistants & Chat |
+| Exécution locale de LLM, moteur d'inférence, passerelle LLM, fine-tuning | IA & Machine Learning > Inférence & LLM locaux |
+| Modèle ou framework ML, génération image / 3D / vidéo / musique, OCR, vision | IA & Machine Learning > Modèles & Génération |
+| TTS, STT, dictée, clonage de voix, traduction vocale | IA & Machine Learning > Voix & Audio |
+| Agent de code, outil autour de Claude Code / Codex, intelligence de codebase | IA & Machine Learning > Agents de code |
+| Skill, prompt, registre / collection de skills | IA & Machine Learning > Skills & Prompts |
+| Serveur MCP, navigateur ou connecteur pour agents | IA & Machine Learning > MCP & Outils pour agents |
+| Framework / plateforme / sandbox / évaluation d'agents, builder visuel | IA & Machine Learning > Frameworks d'agents |
+| RAG, GraphRAG, mémoire d'agent, index vectoriel | IA & Machine Learning > RAG & Mémoire |
+| Application IA finale (rédaction, recherche scientifique, génération de contenu) | IA & Machine Learning > Applications IA |
+| Langage, shell, framework back-end, bibliothèque | Développement > Langages & Bibliothèques |
+| Framework web, composants UI, CMS headless, templates de dashboard | Développement > Front-end & UI |
+| Outil de design, maquettage, systèmes de design (DESIGN.md) | Développement > Design & UI |
+| Terminal, outil CLI / TUI, prompt shell | Développement > Terminal & CLI |
+| Éditeur de code, IDE | Développement > Éditeurs & IDE |
+| Forge Git, client Git | Développement > Git & Forges |
+| Client API, mock, données de test, passerelle SMS / email pour dev | Développement > API & Tests |
+| Diagrammes as code, schémas, visualisation d'architecture | Développement > Diagrammes & Visualisation |
+| Low-code, outils internes | Développement > Low-code & Outils internes |
+| Environnement de dev, gestionnaire de paquets, boîte à outils dev | Développement > Environnements & Utilitaires |
+| Docker, Kubernetes, runtime OCI, templates compose | DevOps & Infrastructure > Conteneurs & Kubernetes |
+| CI/CD, GitOps, release, feature flags | DevOps & Infrastructure > CI/CD & Release |
+| Orchestration de tâches / workflows, n8n, runbooks | DevOps & Infrastructure > Automatisation & Workflows |
+| IaC, provisioning, config management, émulateur cloud | DevOps & Infrastructure > Infrastructure as Code |
+| Logs, traces, métriques, alertes, APM, supervision réseau | DevOps & Infrastructure > Monitoring & Observabilité |
+| PaaS self-hosted, panneau d'hébergement, gestion de reverse proxy | DevOps & Infrastructure > PaaS & Self-hosting |
+| Hyperviseur, VM, cloud privé / IaaS, stockage objet | DevOps & Infrastructure > Virtualisation & Cloud |
+| OSINT, fuite de données, reconnaissance | Cybersécurité > OSINT & Renseignement |
+| Pentest, outil offensif, reverse engineering | Cybersécurité > Offensif & Reverse |
+| IDS, SIEM, honeypot, threat intel, CVE, gestion des vulnérabilités | Cybersécurité > Détection & Vulnérabilités |
+| Audit, conformité, hardening | Cybersécurité > Audit & Conformité |
+| IAM, SSO, auth, captcha, PAM, bastion | Cybersécurité > Identité, Accès & Bastions |
+| Secrets, credentials, certificats, ACME | Cybersécurité > Secrets & Certificats |
+| VPN, tunnel, zero trust, pare-feu, DNS / filtrage de pubs, anti-censure | Cybersécurité > Réseau, VPN & Filtrage |
+| SQL client, ORM, sauvegarde, pooler, admin DB | Bases de données > Outils DB |
 | Base relationnelle, distribution PostgreSQL | Bases de données > Bases relationnelles |
 | NoSQL, cache, key-value | Bases de données > Bases NoSQL & Cache |
-| OLAP, analytique colonaire | Bases de données > Analytique & OLAP |
-| Dashboard BI, visualisation de données | Data & Analytics > Business Intelligence |
-| ETL, data platform, data lake, data cleaning | Data & Analytics > Data Platforms |
-| Streaming, big data, pipeline temps-réel | Data & Analytics > Big Data & Streaming |
-| Scanner réseau, OSINT, threat intel, honeypot | Cybersécurité > Threat Detection & Analysis |
-| IAM, SSO, auth, OIDC | Cybersécurité > Authentication & IAM |
-| VPN, tunnel, proxy, accès réseau, DNS | Cybersécurité > Réseau & Accès |
-| Secrets, credentials, certificats | Cybersécurité > Secrets & Credentials |
-| Reverse engineering, forensics, désassemblage | Cybersécurité > Reverse Engineering |
-| PAM, bastion, jump server | Cybersécurité > PAM & Jump Servers |
-| Audit, compliance, scan de sécurité | Cybersécurité > Audit & Compliance |
-| Hyperviseur (bare-metal, type 1/2) | Virtualisation & Infrastructure > Hyperviseurs |
-| Cloud infrastructure, IaaS | Virtualisation & Infrastructure > Cloud Infrastructure |
-| OS immuable, distro Linux, firmware | Systèmes d'exploitation > Linux |
-| Outil système, monitoring OS, gestionnaire de paquets | Systèmes d'exploitation > Outils système |
-| Compatibilité Wine, Proton | Systèmes d'exploitation > Compatibilité Windows |
-| Suite bureautique, PDF, conversion de fichiers | Utilitaires > Documents & PDF |
-| Media, streaming, download, IPTV, audio | Utilitaires > Médias & Multimédia |
-| Remote desktop, accès distant | Utilitaires > Remote Desktop |
-| Homepage, dashboard perso, homelab dashboard | Utilitaires > Dashboards & Homepages |
-| Boot, live USB, scan disque | Utilitaires > Système & Boot |
-| Gestion de projet, kanban, ticketing, sprints | Productivité & Collaboration > Gestion de projet |
-| CRM, ERP, gestion commerciale | Productivité & Collaboration > CRM & ERP |
-| Gestion d'actifs IT, CMDB | Productivité & Collaboration > Gestion d'actifs IT |
-| Notes, wiki, PKM, knowledge management | Productivité & Collaboration > Notes & Documentation |
-| Comptabilité, budget, facturation | Productivité & Collaboration > Finance |
-| PCB, FPGA, Verilog, hardware design, télémétrie série | Électronique & Hardware |
-| Blog technique, cours, roadmap, guide, awesome-list | Documentation & Learning |
-| Émulateur, projet indie, fitness, sans catégorie claire | Expérimental & Projets GitHub |
+| OLAP, time-series, analytique colonaire | Bases de données > Analytique & OLAP |
+| ETL, data engineering, big data, streaming, nettoyage de données | Data & Analytics > Pipelines & Data Engineering |
+| BI, dashboards data, visualisation, géodonnées | Data & Analytics > Visualisation & BI |
+| Distribution Linux, OS immuable, firmware | Systèmes d'exploitation > Distributions Linux |
+| Outil / personnalisation Linux, admin serveur Linux | Systèmes d'exploitation > Linux : Outils & Bureau |
+| Application ou tweak macOS | Systèmes d'exploitation > macOS |
+| Outil / debloat Windows, Wine, Proton, apps Windows sous Linux | Systèmes d'exploitation > Windows & Compatibilité |
+| App Android / iOS, Android sous Linux | Systèmes d'exploitation > Mobile (Android & iOS) |
+| Clé USB multiboot, bootloader, test de distributions | Systèmes d'exploitation > Boot & Installation |
+| Suite bureautique, PDF, conversion, scan, composition (Typst) | Utilitaires > Documents & PDF |
+| Serveur média, IPTV, streaming, outils Jellyfin / Emby | Utilitaires > Serveurs média & Streaming |
+| Téléchargement vidéo / musique | Utilitaires > Téléchargement de médias |
+| Lecteur, édition audio / vidéo / photo, capture d'écran | Utilitaires > Lecture, Édition & Capture |
+| Synchronisation, partage, sauvegarde de fichiers | Utilitaires > Fichiers, Sync & Sauvegarde |
+| Remote desktop, accès SSH / VDI | Utilitaires > Accès distant |
+| Homepage, dashboard perso, homelab | Utilitaires > Dashboards & Homelab |
+| Gestion de projet, kanban, tâches, suivi du temps | Productivité & Collaboration > Projets & Tâches |
+| Messagerie d'équipe, email, suite collaborative, réseaux sociaux | Productivité & Collaboration > Communication & Suites |
+| Notes, wiki, PKM, base de connaissances | Productivité & Collaboration > Notes & Connaissances |
+| CRM, ERP, support client, gestion d'actifs IT | Productivité & Collaboration > CRM, ERP & Gestion |
+| Budget, comptabilité, facturation, trading | Productivité & Collaboration > Finance |
+| RSS, newsletter, lecture, tendances GitHub | Productivité & Collaboration > Veille & Lecture |
+| Cours, formation interactive, labs | Documentation & Learning > Cours & Formation |
+| Guide, blog technique, roadmap, papers, system design | Documentation & Learning > Guides & Références |
+| Awesome-list, annuaire, landscape, répertoire d'alternatives | Documentation & Learning > Awesome lists & Annuaires |
+| Microcontrôleur, ESP32, IoT, domotique, télémétrie série | Électronique & Hardware > Embarqué & IoT |
+| PCB, FPGA, Verilog, impression 3D, hardware open-source | Électronique & Hardware > Conception & Fabrication |
+| Jeu, moteur de jeu, émulateur, cloud gaming | Loisirs & Vie perso > Jeux & Émulation |
+| Fitness, nutrition, sport | Loisirs & Vie perso > Sport & Santé |
+| Cuisine, voyage, cartes, immobilier, suivi de prix, apprentissage perso | Loisirs & Vie perso > Vie pratique |
 
 **Cas ambigus :**
 - Monitoring ET IaC → l'usage premier ? Si surveiller → Monitoring.
-- IA qui génère du code → si principalement LLM/assistant → IA & ML. Si IDE avec IA → Éditeurs & IDE.
-- Data ET viz → si la viz est le produit → BI. Si moteur de données → Data Platforms.
+- IA qui génère du code → agent / assistant de code → IA > Agents de code. IDE avec IA intégrée → Développement > Éditeurs & IDE.
+- Data ET viz → si la viz est le produit → Visualisation & BI. Si moteur de données → Pipelines & Data Engineering.
 - Sécurité ET automation → la sécurité prime toujours.
-- Awesome-list sur un sujet sécu → Documentation & Learning (pas Cybersécurité).
-- Pas de catégorie évidente → Expérimental (créer une sous-catégorie si 2-3 outils similaires).
+- Awesome-list, quel que soit le sujet (sécu, IA, jeux…) → Documentation & Learning > Awesome lists & Annuaires. Exception : les collections de skills / prompts installables → IA > Skills & Prompts.
+- Outil destiné à un OS précis (app macOS, debloat Windows) → la sous-catégorie de cet OS, même si c'est « média » ou « système ».
+- Pas de catégorie évidente → chercher la plus proche ; créer une sous-catégorie si 3+ outils similaires. Il n'y a plus de catégorie fourre-tout « Expérimental ».
 
 ### Étape 5 — Insérer dans bookmarks.html
 
@@ -231,7 +264,7 @@ Statut = `ajouté`, `doublon ignoré`, ou `catégorie à confirmer`
 ### Interdictions
 
 - Ne jamais catégoriser sans avoir lu l'entrée dans `app-new.meta.json` (généré par `bm-fetch`)
-- Ne jamais mettre dans "Expérimental" si une catégorie existe
+- Ne jamais laisser un lien à la racine d'une catégorie : toujours une sous-catégorie (existante, ou nouvelle si 3+ outils similaires)
 - Ne jamais modifier les liens existants ni la structure HTML
 - Ne jamais oublier l'archivage dans `app.link.txt` et la mise à jour du CSV
 
@@ -256,6 +289,15 @@ Sélecteur dans le header → attribut `data-theme` sur `body` → override CSS 
 
 Les couleurs Three.js sont mises à jour via `window.updateScene3DColors(cfg)` depuis `script.js`.
 
+### Conventions CSS
+
+- **Tokens d'état** (`css/variables.css`) : `--hover-bg`, `--active-bg`, `--gold` — surchargés par les thèmes clairs. Ne jamais écrire `rgba(255,255,255,…)` pour un survol : invisible sur Light / Apple Light.
+- **Transitions** : `transition: var(--transition-ui)` (propriétés ciblées). Pas de `transition: all`.
+- **Contraste** : pas d'`opacity` sur un texte informatif (URL, date, description, compteurs) — utiliser `--text-muted` / `--text-dim`, calés à ≥ 4.5:1 par thème. axe ne mesure pas les zones en verre (backdrop-filter) : vérifier au calcul.
+- **Header desktop** de hauteur fixe `--header-h` : la sidebar collante s'y cale (`top` / `height`). Sur mobile (≤ 768px), header `auto` et sidebar `static`.
+- **Thèmes Apple** : ne pas remettre `position: relative` sur `header` / `.sidebar` (casse le `sticky`).
+- **Mouvement réduit** : bloc `prefers-reduced-motion` dans `base.css` ; Three.js n'est pas lancé (index.html).
+
 ### Typographie fluide
 
 ```css
@@ -278,10 +320,15 @@ Toutes les tailles sont en `rem` pour s'adaater automatiquement à la résolutio
 | Mode compact | Bouton `⊟` sort-bar | `compactMode` |
 | Sidebar toggle | Raccourci `F` | `sidebarCollapsed` |
 | Thème | Sélecteur header | `theme` |
-| Audio | Bouton speaker | `audioEnabled` |
+| Audio | Bouton speaker | `audioEnabled`, `audioVolume` |
+| Popup de bienvenue | 1re visite (aucun `audioEnabled` ni `welcomeSeen`) | `welcomeSeen` |
 | Scroll | Auto `beforeunload` | `scrollPosition`, `sidebarScroll`, `contentScroll` |
 
-**Logique audio** : si `audioEnabled === 'false'` → ne jamais relancer automatiquement.
+**Logique audio** (anti « screamer ») :
+- 1re visite → popup `<dialog id="welcome-dialog">` : « Lancer la musique » ou « Continuer sans musique » (focus par défaut, Échap = sans musique). Aucun son ni téléchargement de `ambient.mp3` avant ce choix.
+- `audioEnabled === 'true'` → lecture au 1er clic / touche (geste requis par les navigateurs).
+- `audioEnabled === 'false'` → ne jamais relancer automatiquement.
+- Chaque démarrage fait un fondu d'entrée de 1,5 s jusqu'au volume réglé (30 % par défaut).
 
 ### Favoris — features
 - Export JSON (bouton ↓ Export dans le panel)
@@ -295,7 +342,8 @@ Toutes les tailles sont en `rem` pour s'adaater automatiquement à la résolutio
 ### PWA
 
 - `manifest.json` + `sw.js` (service worker)
-- Cache-first pour assets statiques, network-first pour `bookmarks.csv`
+- Cache-first pour assets statiques (polices mises en cache à la volée), network-first pour `bookmarks.csv`
+- `ambient.mp3` n'est pas précaché et l'`<audio>` est en `preload="none"` : 4 Mo chargés seulement au premier PLAY
 - Installable depuis Chrome/Edge via le bouton dans la barre d'adresse
 
 ### Import bookmarks externe
@@ -312,19 +360,24 @@ Bouton `~` sur chaque carte (visible au hover) → popover avec les 5 bookmarks 
 
 | Outil | Décision | Raison |
 |---|---|---|
-| Incus OS | Systèmes d'exploitation > Linux | OS immuable pour hôtes LXC/Incus, pas un hyperviseur |
-| Maester | Développement > Langages & Shells | Framework de tests PowerShell, pas CI/CD |
-| Datus | Data & Analytics > Big Data & Streaming | Le produit est data engineering, pas IA |
-| Bamqam | Expérimental | Carte de suivi militaire, pas un outil dev |
-| fzf / bat / Starship / Yazi | Outils de développement > UI/Terminal | Outils CLI/shell améliorant le terminal, pas des langages |
-| wger | Expérimental | Application fitness, aucune catégorie dev existante |
-| melonDS / Tanuki3DS | Expérimental | Émulateurs, hors périmètre dev |
-| GhostVM | Expérimental | Workspaces macOS isolés, pas un hyperviseur classique |
-| Digital Forensics Guide | Documentation & Learning | Guide pédagogique, malgré le sujet sécu |
-| Awesome Connected Things Sec | Documentation & Learning | Awesome-list éducative, pas un outil actif |
-| Serial Studio | Électronique & Hardware | Télémétrie UART/CAN/BLE, usage hardware embarqué |
-| Verilator | Électronique & Hardware | Simulateur Verilog/SystemVerilog pour FPGA |
-| DockTail | Développement > Conteneurs & Orchestration | Expose Docker via Tailscale, usage conteneurs |
-| httpSMS / SMS Gateway | Outils de développement > API & Testing | API SMS via Android, usage dev/intégration |
-| OpenRefine | Data & Analytics > Data Platforms | Nettoyage de données, pas BI (pas de viz) |
-| KNIME | Data & Analytics > Data Platforms | ETL et pipelines data avant tout |
+| Incus OS | Systèmes d'exploitation > Distributions Linux | OS immuable pour hôtes LXC/Incus, pas un hyperviseur |
+| Maester | Cybersécurité > Audit & Conformité | Tests PowerShell de conformité sécurité (M365) : la sécurité prime sur le langage |
+| Datus | Data & Analytics > Pipelines & Data Engineering | Le produit est data engineering, pas IA |
+| Bamqam | Cybersécurité > OSINT & Renseignement | Carte collaborative d'opérations militaires : renseignement en sources ouvertes |
+| fzf / bat / Starship / Yazi | Développement > Terminal & CLI | Outils CLI/shell améliorant le terminal, pas des langages |
+| wger / Workout Cool / lyftr | Loisirs & Vie perso > Sport & Santé | Applications fitness |
+| melonDS / Tanuki3DS | Loisirs & Vie perso > Jeux & Émulation | Émulateurs |
+| GhostVM / VirtualBuddy | DevOps & Infrastructure > Virtualisation & Cloud | VM macOS isolées : virtualisation |
+| Digital Forensics Guide | Documentation & Learning > Guides & Références | Guide pédagogique, malgré le sujet sécu |
+| Awesome Connected Things Security | Documentation & Learning > Awesome lists & Annuaires | Awesome-list éducative, pas un outil actif |
+| Serial Studio | Électronique & Hardware > Embarqué & IoT | Télémétrie UART/CAN/BLE, usage hardware embarqué |
+| Verilator | Électronique & Hardware > Conception & Fabrication | Simulateur Verilog/SystemVerilog pour FPGA |
+| DockTail | DevOps & Infrastructure > Conteneurs & Kubernetes | Expose Docker via Tailscale, usage conteneurs |
+| httpSMS / SMS Gateway | Développement > API & Tests | API SMS via Android, usage dev/intégration |
+| OpenRefine / KNIME | Data & Analytics > Pipelines & Data Engineering | Nettoyage de données / ETL, pas de viz |
+| Awesome Agent Skills / awesome-claude-skills | IA & Machine Learning > Skills & Prompts | Catalogues de skills installables (exception à la règle awesome-list) |
+| Sniffnet / NetFluss / LibreSpeed | DevOps & Infrastructure > Monitoring & Observabilité | Supervision réseau, pas de la détection de menace |
+| CaddyManager / Traefik Manager / Pingora Proxy Manager | DevOps & Infrastructure > PaaS & Self-hosting | Interfaces d'hébergement / reverse proxy, pas de la sécurité |
+| n8n / Kestra / Temporal / Windmill | DevOps & Infrastructure > Automatisation & Workflows | Orchestration de workflows, distincte du CI/CD |
+| Apache Airflow | Data & Analytics > Pipelines & Data Engineering | Orchestration de pipelines data |
+| Codeburn / Clawdmeter | IA > Agents de code / Électronique > Embarqué & IoT | Suivi de consommation Claude Code (TUI) / afficheur ESP32 |
