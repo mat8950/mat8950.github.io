@@ -41,3 +41,8 @@ vps/
 
 # Lanceur local du scraper VPS (référence l'hôte SSH interne + dépend de vps/)
 bm-scout.bat
+# Build GitHub Pages (workflow static.yml)
+_site/
+
+# Lanceur local Linux du scraper VPS (alias SSH interne + dépend de vps/)
+bm-scout.sh

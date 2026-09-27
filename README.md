@@ -26,7 +26,7 @@ Simply open `index.html` in your browser. The application will automatically loa
 
 - `index.html` - Main application page
 - `script.js` - Application logic and bookmark parsing
-- `styles.css` - Styling and themes
+- `css/` - Styling and themes (linked directly from `index.html`)
 - `bookmarks.html` - Bookmark data in Netscape format
 
 ## Adding Bookmarks

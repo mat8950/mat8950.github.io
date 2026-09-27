@@ -1,0 +1,9 @@
+# Fins de ligne LF dans le dépôt, quel que soit l'OS (évite les diffs CRLF après passage Windows ↔ Linux)
+* text=auto eol=lf
+
+# Binaires
+*.mp3   binary
+*.png   binary
+*.ico   binary
+*.woff2 binary
+*.exe   binary
