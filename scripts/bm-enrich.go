@@ -895,6 +895,7 @@ var META = map[string][2]string{
 	"https://romm.app":                                              {"Gestionnaire et lecteur de ROMs self-hosted.", "retrogaming|self-hosted|open-source|emulation|rommapp"},
 	"https://vita3k.org":                                            {"Émulateur PlayStation Vita expérimental.", "playstation|vita|emulator|emulation|psvita|ps-vita"},
 	"https://dawarich.app":                                          {"Alternative self-hosted à l'historique de localisation Google (Timeline).", "google-maps|maps|self-hosted|homelab|owntracks|gpslogger"},
+	"https://git.deuxfleurs.fr/Deuxfleurs/garage":                   {"Stockage objet compatible S3, léger et géo-distribué, conçu pour l'auto-hébergement sur des machines modestes.", "s3|object-storage|self-hosted|distributed|rust|storage"},
 }
 
 func main() {
