@@ -497,6 +497,18 @@
     background: var(--hover-bg);
 }
 
+/* Lien vers le dépôt du site : logo GitHub seul */
+.header-gh {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding-inline: 0.55rem;
+    text-decoration: none;
+}
+/* Hauteur d'une ligne de texte : même hauteur que les autres boutons, dans tous les thèmes */
+.header-gh .gh-icon { width: 1.2em; height: 1.2em; }
+.header-gh:focus-visible { color: var(--text-primary); border-color: var(--text-primary); }
+
 /* ---- BADGE (nouveau count) ---- */
 .badge {
     display: inline-flex;

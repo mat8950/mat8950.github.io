@@ -359,6 +359,7 @@ Toutes les tailles sont en `rem` pour s'adaater automatiquement à la résolutio
 | Filtre date | Select sort-bar | `activeFilters.dateRange` |
 | Filtre licence | Menu « Toutes licences » sort-bar (compteurs du contexte courant + 10 licences précises), clic sur un badge licence (famille), suggestions de recherche (« agpl », « open source »…), section Licences des Stats, `?licence=` | — (`activeFilters.license` : famille ou licence précise) |
 | Stats licences | Panneau Stats : % libre, open-core, non libres, inconnues ; répartition par famille ; licences les plus fréquentes ; part de libre par catégorie (tout est cliquable → filtre) | — |
+| Code source du site | Logo GitHub dans le header → https://github.com/mat8950/mat8950.github.io | — |
 | Lien dépôt GitHub | Logo GitHub + `owner/repo` sur chaque carte ayant un dépôt (URL GitHub ou colonne `repo`) ; ouvre le dépôt, la carte ouvre toujours le site officiel | — |
 | Liens en erreur | Bouton « ⚠ Erreurs (N) » sort-bar (masqué si 0), `?etat=erreur` | — (`activeFilters.errors`) |
 | Mode compact | Bouton `⊟` sort-bar | `compactMode` |
