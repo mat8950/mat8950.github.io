@@ -141,6 +141,16 @@ function applyLicenseFilter(key, global = false) {
     else displayBookmarks();
 }
 
+// ===== DÉPÔT GITHUB =====
+// Logo GitHub (Octicons « mark-github », licence MIT)
+const GITHUB_ICON = '<svg class="gh-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>';
+
+// « https://github.com/owner/repo[/…] » → « owner/repo », sinon null
+function githubRepoName(url) {
+    const m = /^https?:\/\/(?:www\.)?github\.com\/([^/?#]+)\/([^/?#]+)/i.exec(url || '');
+    return m ? `${m[1]}/${m[2].replace(/\.git$/i, '')}` : null;
+}
+
 // ===== ROUTAGE /categorie/sous-categorie/app =====
 // Mêmes règles que scripts/bm-api.go (slugify / slugs uniques) : les permaliens de l'API doivent ouvrir la bonne carte.
 const ACCENTS = { 'à':'a','á':'a','â':'a','ã':'a','ä':'a','å':'a','ç':'c','è':'e','é':'e','ê':'e','ë':'e','ì':'i','í':'i','î':'i','ï':'i',
@@ -1311,7 +1321,7 @@ function createBookmarkCard(bookmark) {
         }
 
         // Santé du dépôt GitHub : stars + inactivité ; licence
-        if (meta.stars != null || meta.pushed_at || meta.license || meta.error) {
+        if (meta.stars != null || meta.pushed_at || meta.license || meta.error || meta.repo) {
             const health = document.createElement('div');
             health.className = 'bookmark-health';
 
@@ -1323,6 +1333,21 @@ function createBookmarkCard(bookmark) {
                 err.title = `Lien en erreur à la dernière vérification : ${meta.error}`;
                 health.appendChild(err);
                 card.classList.add('has-link-error');
+            }
+
+            // Dépôt GitHub : logo + owner/repo, lien direct (la carte, elle, ouvre le site officiel)
+            const repoName = githubRepoName(meta.repo);
+            if (repoName && safeHref(meta.repo) !== '#') {
+                const repoLink = document.createElement('a');
+                repoLink.className = 'gh-repo';
+                repoLink.href = meta.repo;
+                repoLink.target = '_blank';
+                repoLink.rel = 'noopener noreferrer';
+                repoLink.title = `Dépôt GitHub : ${meta.repo}`;
+                repoLink.setAttribute('aria-label', `Dépôt GitHub ${repoName}`);
+                repoLink.innerHTML = GITHUB_ICON + `<span>${escapeHtml(repoName)}</span>`;
+                repoLink.addEventListener('click', e => e.stopPropagation());
+                health.appendChild(repoLink);
             }
 
             if (meta.stars != null) {
@@ -1432,9 +1457,9 @@ function createBookmarkCard(bookmark) {
         if (safeHref(bookmark.url) !== '#') window.open(bookmark.url, '_blank', 'noopener');
     });
 
-    // Navigation clavier
+    // Navigation clavier (Entrée sur un lien ou bouton intérieur : laisser cet élément agir)
     card.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' && e.target === card) {
             e.preventDefault();
             if (safeHref(bookmark.url) !== '#') window.open(bookmark.url, '_blank', 'noopener');
         }
@@ -1894,6 +1919,8 @@ function handleKeyboardNavigation(e) {
             break;
 
         case 'Enter':
+            // Focus sur un lien / bouton (dépôt GitHub, badge licence, en-tête…) : son action par défaut
+            if (e.target.closest?.('a, button, select, textarea, [contenteditable="true"]')) break;
             e.preventDefault();
             if (keyboardMode === 'folders' && selectedFolderIndex >= 0 && selectedFolderIndex < visibleFolderItems.length) {
                 visibleFolderItems[selectedFolderIndex].click();

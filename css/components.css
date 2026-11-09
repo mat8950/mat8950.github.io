@@ -814,6 +814,23 @@
     letter-spacing: 0.3px;
     white-space: nowrap;
 }
+/* Lien dépôt GitHub : logo + owner/repo */
+.gh-repo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-width: 0;
+    max-width: 100%;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: var(--transition-ui);
+}
+.gh-repo span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gh-repo .gh-icon { width: 1.15em; height: 1.15em; flex-shrink: 0; }
+.gh-repo:hover,
+.gh-repo:focus-visible { color: var(--text-primary); text-decoration: underline; }
 .gh-stale {
     font-family: var(--font-mono);
     font-size: 0.55rem;
