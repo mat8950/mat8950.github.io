@@ -1,4 +1,4 @@
-const CACHE = 'bookmarks-v15';
+const CACHE = 'bookmarks-v16';
 // Précache minimal pour l'offline. ambient.mp3 n'y est plus (4 Mo, chargé seulement au PLAY).
 // Polices : mises en cache à la volée. Favicons (Google, autre origine) : cache HTTP du navigateur.
 const ASSETS = [

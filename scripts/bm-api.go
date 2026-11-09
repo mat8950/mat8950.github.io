@@ -7,14 +7,24 @@
 // Les slugs et familles de licence suivent exactement les règles de script.js (slugify, buildRoutes,
 // licenseFamily) : un permalien de l'API ouvre la bonne fiche sur le site. Garder les deux alignés.
 //
-// Run:  go run ./scripts/bm-api.go            (relancé aussi par le déploiement GitHub Pages)
+// Option -pages <dossier> (déploiement) : écrit aussi une page HTML par outil (<cat>/<sous-cat>/<outil>.html),
+// sous-catégorie et catégorie (…/index.html), plus sitemap.xml. Chaque page = index.html avec titre, description,
+// Open Graph, JSON-LD et un résumé lisible sans JavaScript : les liens profonds répondent 200 (au lieu de passer
+// par 404.html), lisibles par les moteurs et les IA ; l'application prend ensuite la main (même routage).
+//
+// Run:  go run ./scripts/bm-api.go                     (api/ + llms.txt)
+//
+//	go run ./scripts/bm-api.go -pages _site        (déploiement GitHub Pages : + pages + sitemap.xml)
 package main
 
 import (
 	"encoding/csv"
 	"encoding/json"
+	"flag"
 	"fmt"
+	"html"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -203,6 +213,8 @@ type Cat struct {
 }
 
 func main() {
+	pagesDir := flag.String("pages", "", "dossier du site à publier : y écrire une page HTML par outil / catégorie + sitemap.xml")
+	flag.Parse()
 	f, err := os.Open(apiCSV)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "[ERROR]", err)
@@ -374,6 +386,220 @@ func main() {
 	})
 	writeLLMs(catList, famCount, topLicenses, len(apps), now)
 	fmt.Printf("[OK] %d outils, %d catégories → api/apps.json, api/categories.json, llms.txt\n", len(apps), len(catList))
+	if *pagesDir != "" {
+		writePages(*pagesDir, apps, catList, now)
+	}
+}
+
+// ---------- Pages statiques (liens profonds en HTTP 200) ----------
+
+func fail(format string, a ...any) {
+	fmt.Fprintf(os.Stderr, "[ERROR] "+format+"\n", a...)
+	os.Exit(1)
+}
+
+// Remplace exactement une occurrence (sinon index.html a changé : on échoue plutôt que publier des pages fausses)
+func replaceOnce(s, old, new string) string {
+	if n := strings.Count(s, old); n != 1 {
+		fail("modèle index.html : %d occurrence(s) de %q (1 attendue)", n, old)
+	}
+	return strings.Replace(s, old, new, 1)
+}
+
+func truncate(s string, n int) string {
+	r := []rune(s)
+	if len(r) <= n {
+		return s
+	}
+	return strings.TrimSpace(string(r[:n-1])) + "…"
+}
+
+var (
+	reTitleTag = regexp.MustCompile(`<title>[^<]*</title>`)
+	reMetaDesc = regexp.MustCompile(`<meta name="description" content="[^"]*">`)
+	reOGTitle  = regexp.MustCompile(`<meta property="og:title" content="[^"]*">`)
+	reOGDesc   = regexp.MustCompile(`<meta property="og:description" content="[^"]*">`)
+	reSPDXID   = regexp.MustCompile(`^[A-Za-z0-9.\-]+$`)
+)
+
+type pageInfo struct {
+	path, title, desc, canonical, jsonld, body string
+}
+
+func renderPage(tpl string, p pageInfo) string {
+	e := html.EscapeString
+	one := func(re *regexp.Regexp, s, new string) string {
+		if n := len(re.FindAllString(s, -1)); n != 1 {
+			fail("modèle index.html : %d occurrence(s) de %s (1 attendue)", n, re)
+		}
+		return re.ReplaceAllLiteralString(s, new)
+	}
+	out := one(reTitleTag, tpl, "<title>"+e(p.title)+"</title>")
+	out = one(reMetaDesc, out, `<meta name="description" content="`+e(p.desc)+`">`)
+	out = one(reOGTitle, out, `<meta property="og:title" content="`+e(p.title)+`">`)
+	out = one(reOGDesc, out, `<meta property="og:description" content="`+e(p.desc)+`">`)
+	out = replaceOnce(out, `<link rel="canonical" href="`+apiSite+`/">`, `<link rel="canonical" href="`+e(p.canonical)+`">`)
+	out = replaceOnce(out, `<meta property="og:url" content="`+apiSite+`/">`, `<meta property="og:url" content="`+e(p.canonical)+`">`)
+	out = replaceOnce(out, "</head>", `    <script type="application/ld+json">`+p.jsonld+"</script>\n</head>")
+	// Résumé statique dans la grille : visible sans JavaScript, remplacé par l'application au chargement
+	return replaceOnce(out, `<div id="bookmarks-grid" role="list" aria-label="Marque-pages"></div>`,
+		`<div id="bookmarks-grid" role="list" aria-label="Marque-pages"><div class="static-fiche" role="listitem">`+p.body+`</div></div>`)
+}
+
+func ldJSON(v any) string {
+	var b strings.Builder
+	enc := json.NewEncoder(&b)
+	enc.SetEscapeHTML(true) // « < » échappé : pas de fermeture de <script> possible
+	enc.Encode(v)
+	return strings.TrimSpace(b.String())
+}
+
+func writePages(dir string, apps []*App, cats []*Cat, now time.Time) {
+	tplBytes, err := os.ReadFile("index.html")
+	if err != nil {
+		fail("lecture index.html : %v", err)
+	}
+	tpl := string(tplBytes)
+	e := html.EscapeString
+	reserved := map[string]bool{"api": true, "css": true, "fonts": true, "lib": true, "icons": true}
+	written := 0
+	write := func(rel string, content string) {
+		full := filepath.Join(dir, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			fail("%v", err)
+		}
+		if err := os.WriteFile(full, []byte(content), 0o644); err != nil {
+			fail("%v", err)
+		}
+		written++
+	}
+	byFolder := map[string][]*App{}
+	for _, a := range apps {
+		byFolder[a.CategoryPath] = append(byFolder[a.CategoryPath], a)
+	}
+	urls := []string{apiSite + "/", apiSite + "/licences.html", apiSite + "/mentions-legales.html"}
+
+	for _, c := range cats {
+		top := strings.Trim(c.Path, "/")
+		if reserved[top] {
+			fail("catégorie %q : chemin %q réservé (dossier du site)", c.Name, top)
+		}
+		// Page catégorie
+		var b strings.Builder
+		fmt.Fprintf(&b, `<h2>%s</h2><p>%d outils, %d %% sous licence libre.</p><ul>`, e(c.Name), c.Count, c.LibrePercent)
+		for _, s := range c.Subcategories {
+			fmt.Fprintf(&b, `<li><a href="%s">%s</a> (%d)</li>`, e(s.Path), e(s.Name), s.Count)
+		}
+		b.WriteString(`</ul>`)
+		write(top+"/index.html", renderPage(tpl, pageInfo{
+			title:     fmt.Sprintf("%s — %d outils · Marque-pages tech", c.Name, c.Count),
+			desc:      truncate(fmt.Sprintf("%d outils %s triés par sous-catégorie, %d %% sous licence libre. Open-source et self-hostable en priorité.", c.Count, c.Name, c.LibrePercent), 160),
+			canonical: c.URL,
+			jsonld:    ldJSON(map[string]any{"@context": "https://schema.org", "@type": "CollectionPage", "name": c.Name, "url": c.URL, "isPartOf": apiSite + "/"}),
+			body:      b.String(),
+		}))
+		urls = append(urls, c.URL)
+
+		for _, s := range c.Subcategories {
+			list := byFolder[s.Path]
+			var sb strings.Builder
+			var items []map[string]any
+			fmt.Fprintf(&sb, `<h2>%s</h2><p><a href="%s">%s</a> · %d outils, %d %% sous licence libre.</p><ul>`, e(s.Name), e(c.Path), e(c.Name), s.Count, s.LibrePercent)
+			names := []string{}
+			for i, a := range list {
+				lic := a.License
+				if lic == "" {
+					lic = "licence inconnue"
+				}
+				fmt.Fprintf(&sb, `<li><a href="%s">%s</a> — %s (%s)</li>`, e(strings.TrimPrefix(a.Permalink, apiSite)), e(a.Name), e(a.Description), e(lic))
+				items = append(items, map[string]any{"@type": "ListItem", "position": i + 1, "name": a.Name, "url": a.Permalink})
+				if i < 5 {
+					names = append(names, a.Name)
+				}
+			}
+			sb.WriteString(`</ul>`)
+			write(strings.Trim(s.Path, "/")+"/index.html", renderPage(tpl, pageInfo{
+				title:     fmt.Sprintf("%s (%s) — %d outils · Marque-pages tech", s.Name, c.Name, s.Count),
+				desc:      truncate(fmt.Sprintf("%d outils %s : %s… %d %% sous licence libre.", s.Count, s.Name, strings.Join(names, ", "), s.LibrePercent), 160),
+				canonical: s.URL,
+				jsonld:    ldJSON(map[string]any{"@context": "https://schema.org", "@type": "CollectionPage", "name": s.Name + " (" + c.Name + ")", "url": s.URL, "mainEntity": map[string]any{"@type": "ItemList", "itemListElement": items}}),
+				body:      sb.String(),
+			}))
+			urls = append(urls, s.URL)
+		}
+	}
+
+	// Pages outils : <cat>/<sous-cat>/<outil>.html → servie sous /<cat>/<sous-cat>/<outil> (sans extension)
+	for _, a := range apps {
+		if strings.HasSuffix(a.ID, "/index") {
+			fail("outil %q : slug « index » en conflit avec la page de sous-catégorie", a.Name)
+		}
+		lic := a.License
+		if lic == "" {
+			lic = "inconnue"
+		}
+		var b strings.Builder
+		fmt.Fprintf(&b, `<h2>%s</h2><p>%s</p><ul>`, e(a.Name), e(a.Description))
+		fmt.Fprintf(&b, `<li>Catégorie : <a href="%s">%s</a> › <a href="%s">%s</a></li>`,
+			e("/"+slugify(a.Category)+"/"), e(a.Category), e(a.CategoryPath), e(a.Subcategory))
+		fmt.Fprintf(&b, `<li>Licence : %s (%s)</li>`, e(lic), e(familyLabels[a.LicenseFamily]))
+		fmt.Fprintf(&b, `<li>Site : <a href="%s" rel="noopener">%s</a></li>`, e(a.URL), e(a.URL))
+		if a.Repo != "" && a.Repo != a.URL {
+			fmt.Fprintf(&b, `<li>Dépôt : <a href="%s" rel="noopener">%s</a></li>`, e(a.Repo), e(a.Repo))
+		}
+		if a.Stars != nil {
+			fmt.Fprintf(&b, `<li>Étoiles GitHub : %d`, *a.Stars)
+			if a.PushedAt != "" {
+				fmt.Fprintf(&b, ` · dernier push : %s`, e(a.PushedAt))
+			}
+			b.WriteString(`</li>`)
+		}
+		if len(a.Tags) > 0 {
+			fmt.Fprintf(&b, `<li>Tags : %s</li>`, e(strings.Join(a.Tags, ", ")))
+		}
+		b.WriteString(`</ul>`)
+
+		ld := map[string]any{
+			"@context": "https://schema.org", "@type": "SoftwareApplication",
+			"name": a.Name, "description": a.Description, "url": a.URL,
+			"applicationCategory": a.Category + " > " + a.Subcategory,
+			"mainEntityOfPage":    a.Permalink,
+			"keywords":            strings.Join(a.Tags, ", "),
+		}
+		if a.Repo != "" {
+			ld["sameAs"] = a.Repo
+		}
+		// Licence libre simple → URL SPDX
+		if parts := licenseParts(a.License); len(parts) == 1 && strings.HasPrefix(a.LicenseFamily, "libre") && reSPDXID.MatchString(parts[0]) {
+			ld["license"] = "https://spdx.org/licenses/" + parts[0] + ".html"
+		}
+		desc := a.Description
+		if lic != "inconnue" {
+			desc += " Licence " + lic + "."
+		}
+		write(a.ID+".html", renderPage(tpl, pageInfo{
+			title:     fmt.Sprintf("%s — %s · Marque-pages tech", a.Name, a.Subcategory),
+			desc:      truncate(desc, 160),
+			canonical: a.Permalink,
+			jsonld:    ldJSON(ld),
+			body:      b.String(),
+		}))
+		urls = append(urls, a.Permalink)
+	}
+
+	// sitemap.xml complet (remplace la version statique du dépôt dans le site publié)
+	var sm strings.Builder
+	sm.WriteString("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n")
+	for i, u := range urls {
+		if i == 0 {
+			fmt.Fprintf(&sm, "  <url><loc>%s</loc><lastmod>%s</lastmod></url>\n", e(u), now.Format("2006-01-02"))
+		} else {
+			fmt.Fprintf(&sm, "  <url><loc>%s</loc></url>\n", e(u))
+		}
+	}
+	sm.WriteString("</urlset>\n")
+	write("sitemap.xml", sm.String())
+	fmt.Printf("[OK] %d pages statiques + sitemap.xml (%d URL) → %s\n", written-1, len(urls), dir)
 }
 
 func writeJSON(path string, v any) {

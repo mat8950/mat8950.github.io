@@ -49,6 +49,9 @@ jobs:
              favicon.ico og-image.png manifest.json sw.js script.js \
              bookmarks.csv bookmarks.html ambient.mp3 llms.txt _site/
           cp -r css fonts lib icons api _site/
+      - name: Pages par outil / catégorie (liens profonds en HTTP 200) + sitemap.xml complet
+        # <cat>/<sous-cat>/<outil>.html et …/index.html, générées depuis index.html (non commitées)
+        run: go run ./scripts/bm-api.go -pages _site
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

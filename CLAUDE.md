@@ -3,7 +3,7 @@
 ## 1. Contexte du projet
 
 Site statique de gestion de marque-pages techniques, déployé sur **GitHub Pages** (branche `main`).
-Déploiement : `.github/workflows/static.yml` publie une **liste blanche** de fichiers (dossier `_site/`). Tout nouveau fichier servi par le site doit y être ajouté (et dans `Dockerfile`), sinon il n'est pas en ligne. Le workflow régénère aussi `api/` et `llms.txt` (`go run ./scripts/bm-api.go`) avant de publier.
+Déploiement : source GitHub Pages = **GitHub Actions** (pas « Deploy from a branch », qui publiait tout le dépôt). `.github/workflows/static.yml` publie une **liste blanche** de fichiers (dossier `_site/`). Tout nouveau fichier servi par le site doit y être ajouté (et dans `Dockerfile`), sinon il n'est pas en ligne. Le workflow régénère aussi `api/` et `llms.txt` (`go run ./scripts/bm-api.go`), puis génère une page HTML par outil, sous-catégorie et catégorie + `sitemap.xml` complet (`bm-api.go -pages _site`, non commités).
 Test local : `docker compose -f docker-compose.yml up -d` → http://localhost:8080 (nginx avec volumes + `nginx.conf` monté : liens profonds `/categorie/…` servis par `index.html`). Même nom de service que `compose.yml` : lancer l'un remplace le conteneur de l'autre.
 Test avec build Docker (proche prod) : `docker compose up -d --build` → http://localhost (sans `-f`, Compose prend `compose.yml` en priorité sur `docker-compose.yml`)
 
@@ -304,7 +304,7 @@ Statut = `ajouté`, `doublon ignoré`, ou `catégorie à confirmer`
 - Slugs : `slugify()` (minuscules, accents retirés, non-alphanumérique → `-`). Fiche d'app : `/<cat>/<sous-cat>/<nom>` ; doublon de nom dans une sous-catégorie → `-2`, `-3` dans l'ordre des URL.
 - `index.html` a `<base href="/">` : toutes les ressources relatives fonctionnent depuis un chemin profond.
 - Navigation : `showFolder()` fait un `pushState` ; `popstate` ré-applique la route. Route d'app : carte placée en tête, surlignée (`.route-highlight`), titre de l'onglet = nom de l'outil. Chemin inconnu → accueil + toast.
-- Accès direct : GitHub Pages sert `404.html`, qui mémorise le chemin et recharge `/` ; nginx (`nginx.conf`) et le service worker servent directement `index.html`.
+- Accès direct : en production, chaque lien profond a sa page générée au déploiement (`<cat>/<sous-cat>/<outil>.html`, servie sans extension ; `<cat>/<sous-cat>/index.html`) : HTTP 200, titre / description / Open Graph / JSON-LD propres, résumé lisible sans JavaScript (`.static-fiche`, remplacé par l'application). Chemin inconnu : GitHub Pages sert `404.html`, qui mémorise le chemin et recharge `/`. En local, nginx (`nginx.conf`) et le service worker servent directement `index.html`. Modifier le `<head>` d'`index.html` (title, description, canonical, og:*) : vérifier que `bm-api -pages` le retrouve (il échoue sinon).
 - Bouton `#` sur chaque carte : copie le permalien. Paramètres : `?q=` (recherche), `?licence=` (famille), `?etat=erreur` (liens morts). La query suit l'état (recherche / filtres) via `stateQuery()` + `replaceState`.
 
 ### Données pour les IA

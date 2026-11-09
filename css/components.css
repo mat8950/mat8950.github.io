@@ -891,6 +891,12 @@ body[data-theme="apple-light"] .bookmark-card.has-link-error { box-shadow: inset
 body[data-theme="light"] #error-filter-btn.active,
 body[data-theme="apple-light"] #error-filter-btn.active { color: #b3261e; border-color: #b3261e; }
 
+/* ---- RÉSUMÉ STATIQUE (pages générées par bm-api -pages) : lisible sans JavaScript, remplacé au chargement ---- */
+.static-fiche { padding: 1rem 0; color: var(--text-secondary); font-size: 0.8rem; line-height: 1.6; }
+.static-fiche h2 { color: var(--text-primary); font-size: 1.1rem; margin-bottom: 0.4rem; }
+.static-fiche ul { padding-left: 1.2rem; margin-top: 0.5rem; }
+.static-fiche a { color: var(--text-primary); }
+
 /* ---- LIEN PROFOND : carte demandée par /categorie/sous-categorie/app ---- */
 .bookmark-card.route-highlight {
     outline: 2px solid var(--gold);
