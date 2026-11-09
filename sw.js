@@ -1,4 +1,4 @@
-const CACHE = 'bookmarks-v10';
+const CACHE = 'bookmarks-v15';
 // Précache minimal pour l'offline. ambient.mp3 n'y est plus (4 Mo, chargé seulement au PLAY).
 // Polices : mises en cache à la volée. Favicons (Google, autre origine) : cache HTTP du navigateur.
 const ASSETS = [
@@ -37,8 +37,16 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
     if (e.request.method !== 'GET') return;
 
-    // Network-first pour bookmarks.html et bookmarks.csv (données fraîches si dispo)
-    if (e.request.url.includes('bookmarks.html') || e.request.url.includes('bookmarks.csv')) {
+    // Lien profond /categorie/sous-categorie/app : c'est l'application (index.html) qui affiche la fiche
+    const path = new URL(e.request.url).pathname;
+    if (e.request.mode === 'navigate' && /^(\/[a-z0-9-]+){1,3}\/?$/.test(path)) {
+        e.respondWith(caches.match('/index.html').then(c => c || fetch('/index.html')));
+        return;
+    }
+
+    // Network-first pour les données (bookmarks.html / .csv, api/*.json) : fraîches si dispo, cache hors ligne
+    const p = new URL(e.request.url).pathname;
+    if (p === '/bookmarks.html' || p === '/bookmarks.csv' || p.startsWith('/api/')) {
         e.respondWith(
             fetch(e.request)
                 .then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); return res; })

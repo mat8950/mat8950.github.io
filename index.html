@@ -2,6 +2,8 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <!-- Base absolue : les liens profonds /categorie/sous-categorie/app chargent la même page -->
+    <base href="/">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Marque-pages tech — outils DevOps, IA, sécu open-source</title>
     <meta name="description" content="Plus de 900 outils techniques triés par catégorie : DevOps, IA, cybersécurité, data, bases de données. Open-source et self-hostable en priorité.">
@@ -26,6 +28,10 @@
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
     <link rel="manifest" href="/manifest.json">
+
+    <!-- Données structurées pour les IA et outils : catalogue JSON + guide llms.txt -->
+    <link rel="alternate" type="application/json" href="/api/apps.json" title="Catalogue des outils (JSON)">
+    <link rel="help" type="text/plain" href="/llms.txt" title="Guide pour les IA">
 
     <link rel="preload" href="/fonts/fira-code-normal-400-700-latin.woff2" as="font" type="font/woff2" crossorigin>
     <!-- CSS chargés en parallèle (plus de chaîne @import via styles.css) — ordre = cascade -->
@@ -166,7 +172,8 @@
                 ↑ Import .html
                 <input type="file" id="import-bookmarks-input" accept=".html,.htm" style="display:none">
             </label>
-            <a class="legal-link" href="mentions-legales.html">Mentions légales &amp; confidentialité</a>
+            <a class="legal-link" href="licences.html">Guide des licences</a>
+            <a class="legal-link legal-link-tight" href="mentions-legales.html">Mentions légales &amp; confidentialité</a>
         </nav>
 
         <main class="content" role="main" aria-label="Liste des marque-pages">
@@ -187,6 +194,22 @@
                         <button class="date-option" data-days="365" role="option" aria-selected="false">1 an</button>
                     </div>
                 </div>
+                <div class="date-filter" id="license-filter">
+                    <button class="sort-btn" id="license-filter-btn" aria-haspopup="listbox" aria-expanded="false" title="Filtrer par type de licence">Toutes licences ▾</button>
+                    <div class="date-panel" id="license-panel" role="listbox" aria-label="Filtrer par licence">
+                        <button class="date-option active" data-license="" role="option" aria-selected="true"><span class="opt-label">Toutes licences</span><span class="opt-count"></span></button>
+                        <button class="date-option" data-license="libre" role="option" aria-selected="false"><span class="opt-label">100 % libre</span><span class="opt-count"></span></button>
+                        <button class="date-option" data-license="libre-permissive" role="option" aria-selected="false"><span class="opt-label">Libre permissive</span><span class="opt-count"></span></button>
+                        <button class="date-option" data-license="libre-copyleft" role="option" aria-selected="false"><span class="opt-label">Libre copyleft</span><span class="opt-count"></span></button>
+                        <button class="date-option" data-license="open-core" role="option" aria-selected="false"><span class="opt-label">Open-core</span><span class="opt-count"></span></button>
+                        <button class="date-option" data-license="source-available" role="option" aria-selected="false"><span class="opt-label">Source disponible</span><span class="opt-count"></span></button>
+                        <button class="date-option" data-license="proprietaire" role="option" aria-selected="false"><span class="opt-label">Propriétaire</span><span class="opt-count"></span></button>
+                        <button class="date-option" data-license="inconnue" role="option" aria-selected="false"><span class="opt-label">Licence inconnue</span><span class="opt-count"></span></button>
+                        <div id="license-precise" class="lic-precise"></div>
+                        <a class="lic-help-link" href="licences.html">? Comprendre les licences</a>
+                    </div>
+                </div>
+                <button class="sort-btn" id="error-filter-btn" aria-pressed="false" title="Afficher seulement les liens en erreur (à corriger)" hidden>⚠ Erreurs</button>
                 <button id="compact-btn" class="sort-btn sort-btn-right" title="Mode compact" aria-label="Mode compact">⊟</button>
             </div>
             <div id="bookmarks-grid" role="list" aria-label="Marque-pages"></div>

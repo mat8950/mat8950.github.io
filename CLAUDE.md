@@ -3,8 +3,8 @@
 ## 1. Contexte du projet
 
 Site statique de gestion de marque-pages techniques, déployé sur **GitHub Pages** (branche `main`).
-Déploiement : `.github/workflows/static.yml` publie une **liste blanche** de fichiers (dossier `_site/`). Tout nouveau fichier servi par le site doit y être ajouté (et dans `Dockerfile`), sinon il n'est pas en ligne.
-Test local : `docker compose -f docker-compose.yml up -d` → http://localhost:8080 (nginx avec volumes, config nginx par défaut : pas de page 404 perso)
+Déploiement : `.github/workflows/static.yml` publie une **liste blanche** de fichiers (dossier `_site/`). Tout nouveau fichier servi par le site doit y être ajouté (et dans `Dockerfile`), sinon il n'est pas en ligne. Le workflow régénère aussi `api/` et `llms.txt` (`go run ./scripts/bm-api.go`) avant de publier.
+Test local : `docker compose -f docker-compose.yml up -d` → http://localhost:8080 (nginx avec volumes + `nginx.conf` monté : liens profonds `/categorie/…` servis par `index.html`). Même nom de service que `compose.yml` : lancer l'un remplace le conteneur de l'autre.
 Test avec build Docker (proche prod) : `docker compose up -d --build` → http://localhost (sans `-f`, Compose prend `compose.yml` en priorité sur `docker-compose.yml`)
 
 **Stack** : HTML / CSS / JS vanilla + Three.js (fond 3D WebGL) + `bookmarks.html` (format Netscape)
@@ -41,7 +41,12 @@ Test avec build Docker (proche prod) : `docker compose up -d --build` → http:/
 | `scripts/bm-suggest.go` | Suggère catégorie/sous-catégorie (mots-clés + précédent par tags) depuis `app-new.meta.json` — lecture seule, ne modifie rien |
 | `scripts/bm-migrate.go` | Met à jour `bookmarks.csv` depuis git history + `bookmarks.html` |
 | `scripts/bm-enrich.go` | Injecte descriptions/tags depuis la map META dans `bookmarks.csv` |
-| `scripts/bm-stars.go` | Enrichit `bookmarks.csv` via API GitHub : `stars`, `pushed_at`, `archived`, `tags` (topics si vides) |
+| `scripts/bm-repo.go` | Remplit la colonne `repo` (dépôt GitHub) des entrées « site officiel » : lien `owner.github.io/repo`, ou dépôt cité par la page dont le nom correspond (+ homepage = même site ou dépôt le plus cité). Ne devine rien, ne touche pas une valeur existante |
+| `scripts/bm-stars.go` | Enrichit `bookmarks.csv` via API GitHub (URL GitHub, sinon colonne `repo`) : `stars`, `pushed_at`, `archived`, `license`, `tags` (topics si vides) |
+| `scripts/bm-check.go` | Vérifie chaque lien (API GitHub pour les dépôts, HTTP sinon) et remplit la colonne `error` : seulement les erreurs sûres (404/410, 5xx répété, DNS, TLS, délai, boucle, domaine à vendre, dépôt introuvable). 401/403/429 et anti-bot = OK ; incertain = valeur conservée ; > 25 % d'erreurs = CSV non modifié. Liste aussi les dépôts renommés (URL à mettre à jour) |
+| `scripts/bm-api.go` | Génère `api/apps.json`, `api/categories.json` et `llms.txt` depuis le CSV (données pour les IA). Slugs et familles de licence = mêmes règles que `script.js` |
+| `scripts/bm-mcp.go` | Serveur MCP stdio (outils `search_apps`, `get_app`, `list_categories`) sur `api/apps.json` local, sinon celui du site |
+| `api/` / `llms.txt` | Générés par `bm-api.go` (commités pour le test Docker, régénérés au déploiement) |
 | `ambient.mp3` | Musique d'ambiance |
 | `docker-compose.yml` | Nginx:alpine avec volumes — test local rapide |
 | `compose.yml` | Build via Dockerfile — test de l'image de prod |
@@ -49,7 +54,8 @@ Test avec build Docker (proche prod) : `docker compose up -d --build` → http:/
 | `nginx.conf` | Config nginx personnalisée |
 | `manifest.json` | PWA manifest |
 | `sw.js` | Service Worker (cache offline) — incrémenter `CACHE` à chaque changement d'assets |
-| `404.html` / `mentions-legales.html` | Pages statiques autonomes (style `css/page.css`, pas de `script.js`) |
+| `licences.html` | Guide des licences (familles, licences courantes, usage interne / SaaS / produit fermé, méthode de classement, lexique). Comptes chargés depuis `api/categories.json`. Lié depuis le menu licence, les Stats et la sidebar. Toujours lier `/licences.html` avec l'extension (un chemin sans point = route de l'application). Infobulles courtes : `LICENSE_HELP` dans `script.js` |
+| `404.html` / `mentions-legales.html` | Pages statiques autonomes (style `css/page.css`, pas de `script.js`). `404.html` renvoie les liens profonds `/categorie/…` vers l'application (sessionStorage `spa-path`) |
 | `robots.txt` / `sitemap.xml` | SEO — mettre à jour `sitemap.xml` si une page est ajoutée |
 | `favicon.ico` / `icons/` / `og-image.png` | Favicon, icônes PWA (SVG + PNG + maskable + apple-touch), image de partage 1200×630 |
 | `fonts/` / `lib/three.min.js` | Polices woff2 et Three.js r128 auto-hébergés (pas de CDN). Ne pas nommer un dossier `vendor/` : Go le prend pour du vendoring |
@@ -74,8 +80,8 @@ bookmarks.csv  →  loadBookmarks() → parseCSV() → buildFromCSV()
 ### Format bookmarks.csv
 
 ```csv
-url,name,category,subcategory,description,tags,date_added,stars,pushed_at,archived
-https://example.com,Nom Outil,Catégorie,Sous-catégorie,Description courte en français,tag1|tag2|tag3,1767298944,1234,2026-05-01,
+url,name,category,subcategory,description,tags,date_added,stars,pushed_at,archived,repo,license,error
+https://example.com,Nom Outil,Catégorie,Sous-catégorie,Description courte en français,tag1|tag2|tag3,1767298944,1234,2026-05-01,,https://github.com/owner/repo,MIT,
 ```
 
 - `tags` : séparés par `|` (curés à la main / `bm-enrich`, sinon auto-remplis depuis les topics GitHub par `bm-stars`)
@@ -84,6 +90,22 @@ https://example.com,Nom Outil,Catégorie,Sous-catégorie,Description courte en f
 - `stars` : étoiles GitHub (auto `bm-stars.go`)
 - `pushed_at` : date du dernier push `YYYY-MM-DD` (auto `bm-stars.go`) → badge « inactif » au frontend si > 12 mois
 - `archived` : `true` si dépôt archivé (auto `bm-stars.go`) → badge « 🗄 archivé » au frontend
+- `repo` : dépôt GitHub d'une entrée dont l'`url` est un site officiel (auto `bm-repo.go`, ou à la main). Vide si l'`url` est déjà un dépôt GitHub
+- `error` : lien mort à la dernière vérification (auto `bm-check.go`, ex. `HTTP 404`, `DNS introuvable`, `dépôt GitHub introuvable`) → badge « ⚠ erreur · détail » + filtre « ⚠ Erreurs (N) » (`?etat=erreur`). Vide = OK. Corriger l'URL puis relancer `bm-check`
+- `license` : SPDX détecté par GitHub (auto `bm-stars.go`), `Aucune` si le dépôt n'a pas de licence. Valeurs manuelles jamais écrasées : `X+EE` (open-core : cœur X + modules entreprise), `Propriétaire`, `X OR Y`, licence maison (`BUSL-1.1`, `SUL`, `PolyForm-…`, `CC-BY-NC-4.0`…) posée sur un `NOASSERTION` après lecture du fichier LICENSE
+
+### Familles de licence (badge, filtre « Toutes licences », `?licence=`, API)
+
+| Famille | Règle | Exemples |
+|---|---|---|
+| `libre-permissive` | Licence libre permissive | MIT, Apache-2.0, BSD, ISC, CC0, CC-BY-4.0, OFL |
+| `libre-copyleft` | Licence libre copyleft | GPL, AGPL, LGPL, MPL, EPL, EUPL, CC-BY-SA |
+| `open-core` | `X+EE` avec X libre | `MIT+EE` (Infisical), `AGPL-3.0+EE` (Metabase) |
+| `source-available` | Code visible, non libre | BUSL, SSPL, Elastic, FSL, PolyForm, Commons Clause, CC-NC, `SUL+EE` (n8n), `Aucune` |
+| `proprietaire` | `Propriétaire` | Postman, Claude AI, VMware |
+| `inconnue` | Vide ou `NOASSERTION` | sites sans dépôt identifié |
+
+Filtre « 100 % libre » (`?licence=libre`) = permissive + copyleft. Licence précise aussi possible : `?licence=AGPL-3.0` (insensible à la casse ; composants de `X OR Y` et cœur de `X+EE` inclus ; `MIT+Commons-Clause` reste un tout). Découpage = `licenseParts` (`script.js`, `bm-api.go`, `bm-mcp.go`). `X OR Y` : la plus libre l'emporte ; `X AND Y` : la plus contraignante. Logique dupliquée dans `script.js` (`licenseFamily`) et `scripts/bm-api.go` : modifier les deux.
 
 ---
 
@@ -243,10 +265,15 @@ Utiliser le timestamp Unix du jour pour ADD_DATE et LAST_MODIFIED.
 ```bash
 go run ./scripts/bm-migrate.go                       # CSV ← bookmarks.html + git history (dates)
 go run ./scripts/bm-enrich.go                        # descriptions/tags curés depuis la map META
-GITHUB_TOKEN=ghp_xxx go run ./scripts/bm-stars.go    # stars + pushed_at + archived + tags (topics si vides)
+GITHUB_TOKEN=ghp_xxx go run ./scripts/bm-repo.go     # dépôt GitHub des nouvelles entrées « site officiel »
+GITHUB_TOKEN=ghp_xxx go run ./scripts/bm-stars.go    # stars + pushed_at + archived + license + tags (topics si vides)
+GITHUB_TOKEN=ghp_xxx go run ./scripts/bm-check.go    # liens morts → colonne error (~5 min, à relancer de temps en temps)
+go run ./scripts/bm-api.go                           # api/*.json + llms.txt
 ```
 
-Ordre important : `bm-stars` en dernier — il ne remplit les `tags` que s'ils sont vides, donc les tags curés par `bm-enrich` priment. Token recommandé (181+ dépôts, limite 60 req/h sans token).
+Ordre important : `bm-stars` après `bm-enrich` — il ne remplit les `tags` que s'ils sont vides, donc les tags curés par `bm-enrich` priment. `bm-repo` avant `bm-stars`. Token indispensable (~820 dépôts : `bm-repo` + `bm-stars` consomment ~2000 requêtes ; limite 5000/h, 60/h sans token). Si `bm-stars` finit avec des « rate limit », le relancer après la remise à zéro : les lignes en erreur ne sont pas modifiées.
+
+Licence `NOASSERTION` sur une nouvelle entrée : lire le fichier LICENSE (`gh api repos/owner/repo/license`) et saisir la valeur à la main (voir Familles de licence).
 
 Puis enrichir **manuellement** dans `bookmarks.csv` les nouvelles entrées non couvertes par `bm-enrich` :
 - `description` : 1 phrase en français résumant le cas d'usage principal
@@ -271,6 +298,19 @@ Statut = `ajouté`, `doublon ignoré`, ou `catégorie à confirmer`
 ---
 
 ## 5. Site web — référence technique
+
+### Liens profonds `/categorie/sous-categorie/app`
+
+- Slugs : `slugify()` (minuscules, accents retirés, non-alphanumérique → `-`). Fiche d'app : `/<cat>/<sous-cat>/<nom>` ; doublon de nom dans une sous-catégorie → `-2`, `-3` dans l'ordre des URL.
+- `index.html` a `<base href="/">` : toutes les ressources relatives fonctionnent depuis un chemin profond.
+- Navigation : `showFolder()` fait un `pushState` ; `popstate` ré-applique la route. Route d'app : carte placée en tête, surlignée (`.route-highlight`), titre de l'onglet = nom de l'outil. Chemin inconnu → accueil + toast.
+- Accès direct : GitHub Pages sert `404.html`, qui mémorise le chemin et recharge `/` ; nginx (`nginx.conf`) et le service worker servent directement `index.html`.
+- Bouton `#` sur chaque carte : copie le permalien. Paramètres : `?q=` (recherche), `?licence=` (famille), `?etat=erreur` (liens morts). La query suit l'état (recherche / filtres) via `stateQuery()` + `replaceState`.
+
+### Données pour les IA
+
+- `api/apps.json` : catalogue complet (`id`, `permalink`, `license_family`, `active`, `link_error`…) + `license_stats` (familles, `libre_percent`, licences précises), `api/categories.json` : arborescence avec `licenses` (familles) et `libre_percent` par catégorie / sous-catégorie, `llms.txt` : guide. Liés depuis `<head>` (`rel=alternate` / `rel=help`).
+- MCP : `claude mcp add marque-pages -- go run ./scripts/bm-mcp.go` (depuis la racine du dépôt). Option `-src <fichier|URL>`. `search_apps` filtre par `license_family` ou `license` (SPDX précis) ; `list_categories` donne la répartition des licences. Mots vides FR/EN ignorés (« outil de monitoring pour k8s »), repli sur résultats partiels (`match: partiel`) si aucun outil ne contient tous les mots ; arguments invalides → `isError` explicite, outil inconnu → erreur JSON-RPC -32602. Hors du dépôt, le serveur lit `api/apps.json` du site en ligne (404 tant que l'API n'est pas déployée).
 
 ### Système de thèmes
 
@@ -317,6 +357,9 @@ Toutes les tailles sont en `rem` pour s'adaater automatiquement à la résolutio
 | Tags | Clic pill tag | Filtre actif (chip) |
 | Tri | Barre sort-bar | `currentSort` |
 | Filtre date | Select sort-bar | `activeFilters.dateRange` |
+| Filtre licence | Menu « Toutes licences » sort-bar (compteurs du contexte courant + 10 licences précises), clic sur un badge licence (famille), suggestions de recherche (« agpl », « open source »…), section Licences des Stats, `?licence=` | — (`activeFilters.license` : famille ou licence précise) |
+| Stats licences | Panneau Stats : % libre, open-core, non libres, inconnues ; répartition par famille ; licences les plus fréquentes ; part de libre par catégorie (tout est cliquable → filtre) | — |
+| Liens en erreur | Bouton « ⚠ Erreurs (N) » sort-bar (masqué si 0), `?etat=erreur` | — (`activeFilters.errors`) |
 | Mode compact | Bouton `⊟` sort-bar | `compactMode` |
 | Sidebar toggle | Raccourci `F` | `sidebarCollapsed` |
 | Thème | Sélecteur header | `theme` |

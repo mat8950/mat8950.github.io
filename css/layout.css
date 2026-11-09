@@ -377,6 +377,8 @@ body[data-theme="gruvbox"]     #theme-selector-btn .btn-swatch { background: #fa
     text-decoration: none;
 }
 
+.legal-link-tight { margin-top: 0.4rem; }
+
 .legal-link:hover,
 .legal-link:focus-visible {
     color: var(--text-primary);

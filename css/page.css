@@ -1,5 +1,5 @@
 /* ==============================================
-   PAGE — Pages statiques simples (404, mentions légales)
+   PAGE — Pages statiques simples (404, mentions légales, guide des licences)
    Autonome : ne dépend pas de styles.css ni de script.js
    ============================================== */
 
@@ -57,8 +57,8 @@ main {
 
 h1 { color: var(--text); font-size: 1.8rem; line-height: 1.2; margin-bottom: 0.5rem; }
 h2 { color: var(--text); font-size: 1.15rem; margin: 2rem 0 0.5rem; }
-p, ul { margin-bottom: 0.9rem; }
-ul { padding-left: 1.3rem; }
+p, ul, ol { margin-bottom: 0.9rem; }
+ul, ol { padding-left: 1.3rem; }
 li { margin-bottom: 0.3rem; }
 strong { color: var(--text); }
 code { font-size: 0.9em; color: var(--text); }
@@ -87,4 +87,93 @@ a:hover { text-decoration-thickness: 2px; }
     line-height: 1;
     color: var(--text);
     letter-spacing: -0.05em;
+}
+
+/* ---- Guide des licences (licences.html) ---- */
+:root {
+    --c-libre-permissive: #6fbf86;
+    --c-libre-copyleft:   #3e9a8c;
+    --c-open-core:        #7fa9d6;
+    --c-source-available: #d6a35c;
+    --c-proprietaire:     #d58fc0;
+    --c-inconnue:         #6b6b6b;
+}
+html[data-theme="light"],
+html[data-theme="apple-light"] {
+    --c-libre-permissive: #2f7a45;
+    --c-libre-copyleft:   #1f6b60;
+    --c-open-core:        #2a5f96;
+    --c-source-available: #a86d14;
+    --c-proprietaire:     #963b76;
+    --c-inconnue:         #8a8a8a;
+}
+
+main.wide { max-width: 58rem; }
+h2[id], section[id] { scroll-margin-top: 1rem; }
+
+.note {
+    border-left: 3px solid var(--text-3);
+    padding: 0.5rem 0.9rem;
+    color: var(--text-3);
+    font-size: 0.9rem;
+}
+
+.toc {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 1.2rem 0 0.5rem;
+}
+.toc a {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0.15rem 0.7rem;
+    font-size: 0.8rem;
+    text-decoration: none;
+    color: var(--text-2);
+}
+.toc a:hover { border-color: var(--text); color: var(--text); }
+
+.table-wrap { overflow-x: auto; margin-bottom: 0.9rem; }
+table { width: 100%; min-width: 40rem; border-collapse: collapse; font-size: 0.82rem; }
+th, td { text-align: left; vertical-align: top; padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--border); }
+thead th { color: var(--text-3); font-weight: 400; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
+tbody th { white-space: nowrap; }
+
+.fam { text-decoration: none; font-weight: 600; }
+.fam::before, .sw {
+    content: '';
+    display: inline-block;
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 2px;
+    margin-right: 0.45rem;
+    vertical-align: -0.05rem;
+    background: var(--c, var(--text-3));
+}
+.sw { margin-right: 0.35rem; }
+.fam-libre-permissive, .sw-libre-permissive { --c: var(--c-libre-permissive); }
+.fam-libre-copyleft,   .sw-libre-copyleft   { --c: var(--c-libre-copyleft); }
+.fam-open-core,        .sw-open-core        { --c: var(--c-open-core); }
+.fam-source-available, .sw-source-available { --c: var(--c-source-available); }
+.fam-proprietaire,     .sw-proprietaire     { --c: var(--c-proprietaire); }
+.fam-inconnue,         .sw-inconnue         { --c: var(--c-inconnue); }
+
+.family { border-top: 1px solid var(--border); margin-top: 2rem; }
+.family h2 { margin-top: 1.5rem; }
+.family h2 .sw { width: 0.9rem; height: 0.9rem; }
+
+dl.usage dt, dl.glossary dt { color: var(--text); font-weight: 600; margin-top: 0.9rem; }
+dl.usage dd, dl.glossary dd { margin: 0.2rem 0 0 0; }
+
+.lic-list { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0.2rem 1.2rem; }
+.lic-list li { color: var(--text-3); font-size: 0.85rem; }
+.lic-list a { font-weight: 600; margin-right: 0.4rem; }
+
+.cnt { color: var(--text-3); font-weight: 400; }
+abbr[title] { text-decoration: underline dotted; cursor: help; }
+
+.sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }

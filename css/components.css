@@ -136,6 +136,9 @@
 /* ---- BOOKMARKS GRID ---- */
 #bookmarks-grid {
     display: grid;   /* = valeur posée par displayBookmarks() : pas de bascule flex→grid au 1er rendu (CLS) */
+    /* Colonne bornée : sans minmax(0, …) la piste implicite « auto » prend la largeur min-content des cartes
+       (description en nowrap) → cartes de 850px sur mobile, boutons # ~ ★ hors écran */
+    grid-template-columns: minmax(0, 1fr);
     gap: 0;
     animation: fadeInContent 0.3s ease;
 }
@@ -754,6 +757,7 @@
 .bookmark-description {
     font-size: 0.62rem;
     color: var(--text-muted);   /* pas d'opacité : --text-muted est calé à ≥ 4.5:1 */
+    max-width: 100%;            /* bornée à la colonne (align-items: flex-start) → ellipse au lieu de passer sous ★ */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -798,6 +802,7 @@
 .bookmark-health {
     display: flex;
     flex-wrap: wrap;
+    max-width: 100%;   /* reste dans la colonne texte : les badges passent à la ligne */
     gap: 0.4rem;
     align-items: center;
     margin-top: 0.2rem;
@@ -834,6 +839,79 @@ body[data-theme="light"] .gh-stale,
 body[data-theme="apple-light"] .gh-stale    { color: #a4332b; border-color: rgba(164, 51, 43, 0.4); }
 body[data-theme="light"] .gh-archived,
 body[data-theme="apple-light"] .gh-archived { color: #7d5230; border-color: rgba(125, 82, 48, 0.45); }
+
+/* ---- LICENCE (badge par famille) ---- */
+.lic-badge {
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    line-height: inherit;
+    margin: 0;
+    background: none;
+    cursor: pointer;      /* bouton : clic = filtrer sur la famille */
+    border: 1px solid currentColor;
+    border-radius: 3px;
+    padding: 0.02rem 0.3rem;
+    white-space: nowrap;
+    max-width: 14rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.lic-badge:hover,
+.lic-badge:focus-visible { border-color: currentColor; background: color-mix(in srgb, currentColor 14%, transparent); }
+/* Teintes ≥ 4.5:1 sur les fonds sombres ; bordure atténuée pour rester discrète */
+.lic-free { color: #6fbf86; border-color: rgba(111, 191, 134, 0.45); }
+.lic-core { color: #7fa9d6; border-color: rgba(127, 169, 214, 0.45); }
+.lic-src  { color: #d6a35c; border-color: rgba(214, 163, 92, 0.45); }
+.lic-prop { color: #d58fc0; border-color: rgba(213, 143, 192, 0.45); }
+.lic-unk  { color: var(--text-muted); border-color: var(--border-color); }
+body[data-theme="light"] .lic-free, body[data-theme="apple-light"] .lic-free { color: #2f7a45; border-color: rgba(47, 122, 69, 0.45); }
+body[data-theme="light"] .lic-core, body[data-theme="apple-light"] .lic-core { color: #2a5f96; border-color: rgba(42, 95, 150, 0.45); }
+body[data-theme="light"] .lic-src,  body[data-theme="apple-light"] .lic-src  { color: #85560f; border-color: rgba(133, 86, 15, 0.45); }
+body[data-theme="light"] .lic-prop, body[data-theme="apple-light"] .lic-prop { color: #963b76; border-color: rgba(150, 59, 118, 0.45); }
+
+/* ---- LIEN EN ERREUR (colonne error, scripts/bm-check.go) ---- */
+.link-error {
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    color: #ff8a80;   /* ≥ 4.5:1 sur tous les fonds sombres */
+    background: rgba(255, 138, 128, 0.12);
+    border: 1px solid rgba(255, 138, 128, 0.55);
+    border-radius: 3px;
+    padding: 0.02rem 0.3rem;
+    max-width: 100%;   /* texte complet (détail utile pour corriger) : retour à la ligne si étroit */
+}
+/* Liseré rouge à gauche : box-shadow (les thèmes Apple annulent border sur .bookmark-card) */
+.bookmark-card.has-link-error { box-shadow: inset 2px 0 0 rgba(255, 138, 128, 0.7); }
+#error-filter-btn.active { color: #ff8a80; border-color: #ff8a80; }
+.sort-btn[hidden] { display: none; }
+body[data-theme="light"] .link-error,
+body[data-theme="apple-light"] .link-error { color: #b3261e; background: rgba(179, 38, 30, 0.08); border-color: rgba(179, 38, 30, 0.5); }
+body[data-theme="light"] .bookmark-card.has-link-error,
+body[data-theme="apple-light"] .bookmark-card.has-link-error { box-shadow: inset 2px 0 0 rgba(179, 38, 30, 0.7); }
+body[data-theme="light"] #error-filter-btn.active,
+body[data-theme="apple-light"] #error-filter-btn.active { color: #b3261e; border-color: #b3261e; }
+
+/* ---- LIEN PROFOND : carte demandée par /categorie/sous-categorie/app ---- */
+.bookmark-card.route-highlight {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+}
+.route-toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    z-index: 4000;
+    max-width: min(90vw, 32rem);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-bright);
+    border-radius: 4px;
+    padding: 0.6rem 0.9rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
 
 /* ---- NUAGE DE TAGS ---- */
 .tag-cloud {
@@ -978,6 +1056,7 @@ body[data-theme="apple-light"] .gh-archived { color: #7d5230; border-color: rgba
 .suggestion-type--tag   { color: var(--accent); opacity: 0.7; }
 .suggestion-type--cat   { opacity: 0.4; }
 .suggestion-type--name  { opacity: 0.35; }
+.suggestion-type--lic   { color: var(--gold); }
 
 .suggestion-label {
     color: var(--text-secondary);
@@ -1140,6 +1219,36 @@ body.light-mode:not([data-theme]) .search-suggestions {
 .date-option.active::after {
     content: ' ✓';
     opacity: 0.7;
+}
+
+/* Menu licence : compteur par option (contexte courant) + licences précises */
+#license-panel { min-width: 15rem; max-height: min(70vh, 34rem); overflow-y: auto; }
+#license-panel .date-option { display: flex; align-items: baseline; gap: 0.8rem; }
+#license-panel .opt-label { flex: 1; }
+.opt-count { font-size: 0.6rem; color: var(--text-muted); }
+#license-panel .date-option.is-empty { color: var(--text-muted); }
+.lic-precise { display: flex; flex-direction: column; border-top: 1px solid var(--border-color); margin-top: 0.2rem; padding-top: 0.2rem; }
+.lic-precise:empty { display: none; }
+.lic-help-link {
+    display: block;
+    border-top: 1px solid var(--border-color);
+    margin-top: 0.2rem;
+    padding: 0.45rem 0.7rem 0.3rem;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+}
+.lic-help-link:hover, .lic-help-link:focus-visible { color: var(--text-primary); text-decoration: underline; }
+.stats-help-link { color: var(--text-secondary); text-transform: none; letter-spacing: 0.5px; }
+.stats-help-link:hover, .stats-help-link:focus-visible { color: var(--text-primary); }
+.lic-precise-title {
+    padding: 0.35rem 0.7rem 0.15rem;
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
 }
 
 /* ---- FILTER BAR ---- */
@@ -1374,10 +1483,84 @@ body.light-mode:not([data-theme]) .search-suggestions {
 .stats-bar-count {
     font-size: 0.6rem;
     color: var(--text-muted);
-    width: 2rem;
+    min-width: 2rem;      /* « ★ 534k » sur une ligne */
+    white-space: nowrap;
     text-align: right;
     flex-shrink: 0;
 }
+
+/* Licences (section stats) : couleurs de famille = badges .lic-* */
+.seg-libre-permissive { background: #6fbf86; }
+.seg-libre-copyleft   { background: #3e9a8c; }
+.seg-open-core        { background: #7fa9d6; }
+.seg-source-available { background: #d6a35c; }
+.seg-proprietaire     { background: #d58fc0; }
+.seg-inconnue         { background: var(--border-bright); }
+body[data-theme="light"] .seg-libre-permissive, body[data-theme="apple-light"] .seg-libre-permissive { background: #2f7a45; }
+body[data-theme="light"] .seg-libre-copyleft,   body[data-theme="apple-light"] .seg-libre-copyleft   { background: #1f6b60; }
+body[data-theme="light"] .seg-open-core,        body[data-theme="apple-light"] .seg-open-core        { background: #2a5f96; }
+body[data-theme="light"] .seg-source-available, body[data-theme="apple-light"] .seg-source-available { background: #a86d14; }
+body[data-theme="light"] .seg-proprietaire,     body[data-theme="apple-light"] .seg-proprietaire     { background: #963b76; }
+
+.stats-kpi-btn {
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    transition: var(--transition-ui);
+}
+.stats-kpi-btn:hover,
+.stats-kpi-btn:focus-visible { border-color: var(--text-primary); background: var(--hover-bg); }
+
+.lic-stack {
+    display: flex;
+    height: 10px;
+    margin-top: 0.9rem;
+    background: var(--border-bright);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.lic-stack > span, .lic-stack-row > span { height: 100%; }
+.stats-bar-track.lic-stack-row { display: flex; height: 6px; overflow: hidden; }
+
+.lic-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 0.8rem;
+    margin-top: 0.6rem;
+}
+.lic-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: none;
+    border: none;
+    border-radius: 3px;
+    padding: 0.15rem 0.3rem;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition-ui);
+}
+.lic-legend-item em { font-style: normal; color: var(--text-muted); }
+.lic-legend-item:hover,
+.lic-legend-item:focus-visible { background: var(--hover-bg); color: var(--text-primary); }
+.lic-swatch { width: 0.6rem; height: 0.6rem; border-radius: 2px; flex-shrink: 0; }
+
+/* Ligne de barre cliquable (licence précise) */
+.stats-row-btn {
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 0.1rem 0;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.stats-row-btn:hover .stats-bar-name,
+.stats-row-btn:focus-visible .stats-bar-name { color: var(--text-primary); text-decoration: underline; }
+.stats-row-btn .stats-bar-track, .stats-row-btn .stats-bar-fill { display: block; }
 
 /* Tag cloud */
 .stats-tags {

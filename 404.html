@@ -9,7 +9,19 @@
     <link rel="icon" href="/favicon.ico" sizes="32x32">
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/css/page.css">
-    <script>try { document.documentElement.dataset.theme = localStorage.getItem('theme') || 'dark'; } catch (e) {}</script>
+    <script>
+        // GitHub Pages sert cette page pour toute adresse inconnue. Un lien profond
+        // /categorie/sous-categorie/app est rendu à l'application : on mémorise le chemin et on charge l'accueil,
+        // qui ouvre la bonne fiche (script.js, « spa-path »). Les vraies 404 (fichier avec extension…) restent ici.
+        (function () {
+            var p = location.pathname;
+            if (/^(\/[a-z0-9-]+){1,3}\/?$/.test(p)) {
+                try { sessionStorage.setItem('spa-path', p + location.search); } catch (e) { return; }
+                location.replace('/');
+            }
+        })();
+        try { document.documentElement.dataset.theme = localStorage.getItem('theme') || 'dark'; } catch (e) {}
+    </script>
 </head>
 <body>
     <main>

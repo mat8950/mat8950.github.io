@@ -4,7 +4,7 @@ let currentFolder = null;
 let allBookmarks = [];
 let searchQuery = '';
 let currentSort = 'default';
-let activeFilters = { tags: [], dateRange: null }; // dateRange: null | 30 | 90 | 365
+let activeFilters = { tags: [], dateRange: null, license: null, errors: false }; // dateRange: null | 30 | 90 | 365 ; license: clé de LICENSE_FILTERS ; errors: liens morts seulement
 let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
 
 // ===== MÉTADONNÉES CSV =====
@@ -35,15 +35,221 @@ function getFavoriteBookmarks() {
     return allBookmarks.filter(b => isFavorite(b.url));
 }
 
+// ===== LICENCES =====
+// Familles calculées depuis la colonne `license` du CSV (SPDX, ou valeur manuelle : « MIT+EE » = open-core,
+// « Propriétaire », « X OR Y »…). Même logique que scripts/bm-api.go (licenseFamily) : garder les deux alignées.
+const LICENSE_FAMILIES = {
+    'libre-permissive': { label: 'Libre — permissive', cls: 'lic-free' },
+    'libre-copyleft':   { label: 'Libre — copyleft',   cls: 'lic-free' },
+    'open-core':        { label: 'Open-core : cœur libre, modules payants', cls: 'lic-core' },
+    'source-available': { label: 'Source disponible, non libre', cls: 'lic-src' },
+    'proprietaire':     { label: 'Propriétaire', cls: 'lic-prop' },
+    'inconnue':         { label: 'Licence inconnue', cls: 'lic-unk' },
+};
+// Options du filtre : « libre » regroupe permissive + copyleft
+const LICENSE_FILTERS = {
+    'libre':            { label: '100 % libre',       match: f => f === 'libre-permissive' || f === 'libre-copyleft' },
+    'libre-permissive': { label: 'Libre permissive',  match: f => f === 'libre-permissive' },
+    'libre-copyleft':   { label: 'Libre copyleft',    match: f => f === 'libre-copyleft' },
+    'open-core':        { label: 'Open-core',         match: f => f === 'open-core' },
+    'source-available': { label: 'Source disponible', match: f => f === 'source-available' },
+    'proprietaire':     { label: 'Propriétaire',      match: f => f === 'proprietaire' },
+    'inconnue':         { label: 'Licence inconnue',  match: f => f === 'inconnue' },
+};
+
+// Explication courte de chaque famille (infobulles du menu, des stats et des badges) ; guide complet : /licences.html
+const LICENSE_HELP = {
+    'libre':            'Licences libres (OSI / FSF) : utiliser, étudier, modifier, redistribuer. Permissives + copyleft.',
+    'libre-permissive': 'Tout usage, y compris commercial et dans du code fermé ; seule obligation : garder la mention de licence (MIT, Apache-2.0, BSD…).',
+    'libre-copyleft':   'Libre ; une version modifiée distribuée reste sous la même licence, code source fourni. AGPL : aussi pour un usage par le réseau.',
+    'open-core':        'Cœur libre et auto-hébergeable ; modules entreprise (SSO, audit…) sous licence payante.',
+    'source-available': 'Code lisible mais non libre : revente, offre hébergée ou usage commercial restreints (BUSL, SSPL, Elastic, sans licence…).',
+    'proprietaire':     'Code fermé : usage selon les conditions de l\'éditeur, souvent un service en ligne.',
+    'inconnue':         'Dépôt non identifié ou licence non reconnue : à vérifier sur le site de l\'outil.',
+};
+
+function singleLicenseFamily(l) {
+    if (/busl|sspl|elastic|fsl-|polyform|commons-clause|-nc\b|-nc-|\bnc-|sul\b|community|modifi|rsal|openrail|source-available|-licen[cs]e$|^aucune$/.test(l)) return 'source-available';
+    if (/^(a|l)?gpl|^mpl|^epl|^eupl|^cc-by-sa|^osl|^cddl|^cecill/.test(l)) return 'libre-copyleft';
+    if (/^(mit|apache|bsd|isc|unlicense|cc0|0bsd|zlib|bsl-1\.0|postgresql|wtfpl|cc-by-\d|ofl|lppl|python|artistic|x11|ncsa|upl)/.test(l)) return 'libre-permissive';
+    return 'inconnue';
+}
+
+function licenseFamily(license) {
+    const l = (license || '').trim().toLowerCase();
+    if (!l || l === 'noassertion') return 'inconnue';
+    if (l.startsWith('propri')) return 'proprietaire';
+    if (l === 'open-core') return 'open-core';
+    // « X+EE » : open-core seulement si le cœur X est libre (n8n « SUL+EE » reste source disponible)
+    if (l.endsWith('+ee')) return licenseFamily(l.slice(0, -3)).startsWith('libre') ? 'open-core' : 'source-available';
+    if (l.includes('+')) return 'source-available';          // MIT+Commons-Clause…
+    // « X OR Y » : le choix le plus libre l'emporte ; « X AND Y » : le plus contraignant
+    const rank = ['libre-permissive', 'libre-copyleft', 'source-available', 'inconnue'];
+    const fams = l.split(/\s+(?:or|and)\s+/).map(singleLicenseFamily);
+    const pick = / or /.test(l) ? Math.min(...fams.map(f => rank.indexOf(f))) : Math.max(...fams.map(f => rank.indexOf(f)));
+    return rank[pick];
+}
+
+function licenseLabel(license) {
+    const l = (license || '').trim();
+    if (l === 'Aucune') return 'sans licence';
+    if (l === 'NOASSERTION') return 'licence ?';
+    return l.replace(/\+EE$/i, ' +EE').replace(/\s+OR\s+/g, ' / ');
+}
+
+// Licences précises d'une valeur : « AGPL-3.0 OR SSPL-1.0 » → [AGPL-3.0, SSPL-1.0] ; « MIT+EE » → [MIT] (EE = modules
+// entreprise) ; « MIT+Commons-Clause » reste un tout (ce n'est pas du MIT). Aucune / NOASSERTION / Propriétaire : familles seulement.
+function licenseParts(license) {
+    const l = (license || '').trim().replace(/\+EE$/i, '');
+    if (!l || /^(aucune|noassertion|propri|open-core$)/i.test(l)) return [];
+    return l.includes('+') ? [l] : l.split(/\s+(?:OR|AND)\s+/i).map(x => x.trim()).filter(Boolean);
+}
+
+// Licences précises du catalogue : minuscule → { id (casse d'origine), count }
+const licenseIndex = new Map();
+function buildLicenseIndex() {
+    licenseIndex.clear();
+    bookmarkMeta.forEach(m => licenseParts(m.license).forEach(id => {
+        const e = licenseIndex.get(id.toLowerCase()) || { id, count: 0 };
+        e.count++;
+        licenseIndex.set(id.toLowerCase(), e);
+    }));
+}
+
+// Filtre licence : famille (clé de LICENSE_FILTERS) ou licence précise (« MIT », « AGPL-3.0 »)
+function licenseMatcher(key) {
+    const fam = LICENSE_FILTERS[key];
+    if (fam) return meta => fam.match(meta?.licenseFamily || 'inconnue');
+    const k = key.toLowerCase();
+    return meta => licenseParts(meta?.license).some(p => p.toLowerCase() === k);
+}
+function licenseFilterLabel(key) { return LICENSE_FILTERS[key]?.label || key; }
+
+// Valeur de ?licence= → famille, ou licence précise avec sa casse d'origine ; inconnue → null
+function resolveLicenseKey(value) {
+    if (!value) return null;
+    if (LICENSE_FILTERS[value]) return value;
+    return licenseIndex.get(value.toLowerCase())?.id || null;
+}
+
+// Filtre licence depuis un badge, les stats ou une suggestion.
+// global : remonter à l'accueil pour chercher dans tout le catalogue (sinon le filtre reste dans le dossier courant)
+function applyLicenseFilter(key, global = false) {
+    activeFilters.license = key;
+    syncLicenseFilterUI();
+    if (global && currentFolder) showFolder(null);
+    else displayBookmarks();
+}
+
+// ===== ROUTAGE /categorie/sous-categorie/app =====
+// Mêmes règles que scripts/bm-api.go (slugify / slugs uniques) : les permaliens de l'API doivent ouvrir la bonne carte.
+const ACCENTS = { 'à':'a','á':'a','â':'a','ã':'a','ä':'a','å':'a','ç':'c','è':'e','é':'e','ê':'e','ë':'e','ì':'i','í':'i','î':'i','ï':'i',
+                  'ñ':'n','ò':'o','ó':'o','ô':'o','õ':'o','ö':'o','ù':'u','ú':'u','û':'u','ü':'u','ý':'y','ÿ':'y','œ':'oe','æ':'ae','ß':'ss' };
+function slugify(str) {
+    const s = (str || '').toLowerCase().replace(/[^\u0000-\u007f]/g, c => ACCENTS[c] ?? ' ')
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    return s || 'x';
+}
+
+const routeIndex = { byPath: new Map() };   // '/cat/sub/app' → bookmark ; '/cat/sub' → pathString ; '/cat' → pathString
+
+// Slug d'app unique par sous-catégorie : en cas de doublon, ordre des URL → nom, nom-2, nom-3…
+function buildRoutes() {
+    routeIndex.byPath.clear();
+    const groups = new Map();
+    allBookmarks.forEach(b => {
+        const [cat, sub] = b.folderPath;
+        if (!cat) return;
+        const catPath = '/' + slugify(cat);
+        routeIndex.byPath.set(catPath, cat);
+        const folderPath = sub ? catPath + '/' + slugify(sub) : catPath;
+        if (sub) routeIndex.byPath.set(folderPath, `${cat} > ${sub}`);
+        const key = folderPath + '/' + slugify(b.title);
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(b);
+    });
+    groups.forEach((list, key) => {
+        list.sort((a, b) => (a.url < b.url ? -1 : a.url > b.url ? 1 : 0));
+        list.forEach((b, i) => {
+            b.route = i === 0 ? key : `${key}-${i + 1}`;
+            routeIndex.byPath.set(b.route, b);
+        });
+    });
+}
+
+function folderToRoute(folderPath) {
+    if (!folderPath) return '/';
+    return '/' + folderPath.split(' > ').map(slugify).join('/') + '/';
+}
+
+let highlightUrl = null;   // carte mise en avant (route d'app) : affichée en tête et surlignée
+
+// Applique l'URL courante. Retourne false si le chemin n'existe pas.
+function applyRoute() {
+    const path = decodeURIComponent(location.pathname).replace(/\/+$/, '') || '/';
+    if (path === '/' || path === '/index.html') {
+        highlightUrl = null;
+        document.title = BASE_TITLE;
+        showFolder(null, { fromRoute: true });
+        return true;
+    }
+    const target = routeIndex.byPath.get(path);
+    if (!target) return false;
+    if (typeof target === 'string') {
+        highlightUrl = null;
+        document.title = BASE_TITLE;
+        showFolder(target, { fromRoute: true });
+    } else {
+        highlightUrl = target.url;
+        showFolder(target.folder, { fromRoute: true });
+        document.title = `${target.title} — Marque-pages tech`;
+    }
+    return true;
+}
+
+// Met l'URL à jour quand on change de dossier (pas pendant l'application d'une route)
+function syncUrl(folderPath, opts = {}) {
+    if (opts.fromRoute) return;
+    highlightUrl = null;
+    document.title = BASE_TITLE;
+    const url = folderToRoute(folderPath) + stateQuery();
+    if (location.pathname + location.search === url) return;
+    history[opts.replace ? 'replaceState' : 'pushState'](null, '', url);
+}
+
+// Query string reflétant recherche + filtres partageables (?q=, ?licence=, ?etat=erreur)
+function stateQuery() {
+    const params = new URLSearchParams();
+    if (searchQuery) params.set('q', searchQuery);
+    if (activeFilters.license) params.set('licence', activeFilters.license);
+    if (activeFilters.errors) params.set('etat', 'erreur');
+    const qs = params.toString();
+    return qs ? '?' + qs : '';
+}
+
+// Après un changement de recherche / filtre : met la query à jour sans créer d'entrée d'historique
+function syncQuery() {
+    const qs = stateQuery();
+    if (location.search !== qs) history.replaceState(history.state, '', location.pathname + qs);
+}
+const BASE_TITLE = document.title;
+
+function copyPermalink(bookmark, card) {
+    const link = location.origin + bookmark.route;
+    navigator.clipboard?.writeText(link).then(() => showCopyFeedback(card)).catch(() => {});
+}
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('App initializing...');
     initThemeToggle();
     initSearch();
     initSortBar();
+    initLicenseFilter();
     initKeyboardNavigation();
     initLazyLoading();
     await loadBookmarks();
+    initErrorFilter();
     initFavoritesPanel();
     initUpdatesPanel();
     initStatsPanel();
@@ -53,17 +259,56 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderFolderTree();
     console.log('Showing initial folder...');
 
-    // Restaurer le dossier sauvegardé ou afficher l'accueil
-    const savedFolder = localStorage.getItem('currentFolder');
-    // Dossier mémorisé disparu (catégories renommées / réorganisées) → accueil
-    if (savedFolder && bookmarkData.folders.some(f => f.pathString === savedFolder)) {
-        showFolder(savedFolder);
+    // Lien profond arrivé via 404.html (GitHub Pages) : on restaure le chemin demandé
+    try {
+        const spaPath = sessionStorage.getItem('spa-path');
+        if (spaPath) { sessionStorage.removeItem('spa-path'); history.replaceState(null, '', spaPath); }
+    } catch (e) {}
+    buildRoutes();
+    applyQueryParams();
+    window.addEventListener('popstate', () => { if (!applyRoute()) showFolder(null, { fromRoute: true }); });
+
+    // Priorité : chemin de l'URL ; sinon dossier mémorisé ; sinon accueil
+    const hasPath = location.pathname.replace(/\/+$/, '') !== '' && location.pathname !== '/index.html';
+    if (hasPath) {
+        if (!applyRoute()) { showFolder(null, { replace: true }); showRouteNotFound(); }
     } else {
-        showFolder(null);
+        const savedFolder = localStorage.getItem('currentFolder');
+        // Lien partagé /?q=…, ?licence=…, ?etat=erreur : recherche globale depuis l'accueil, pas dans le dossier mémorisé
+        const sharedQuery = /[?&](q|licence|license|etat)=/.test(location.search);
+        // Dossier mémorisé disparu (catégories renommées / réorganisées) → accueil
+        if (!sharedQuery && savedFolder && bookmarkData.folders.some(f => f.pathString === savedFolder)) {
+            showFolder(savedFolder, { replace: true });
+        } else {
+            showFolder(null, { replace: true });
+        }
     }
 
     console.log('App initialized!');
 });
+
+// ?q=… (recherche), ?licence=libre|open-core|MIT|AGPL-3.0… et ?etat=erreur au chargement : liens partageables, utiles aux IA
+function applyQueryParams() {
+    const params = new URLSearchParams(location.search);
+    const lic = resolveLicenseKey(params.get('licence') || params.get('license'));
+    if (lic) { activeFilters.license = lic; syncLicenseFilterUI(); }
+    if (params.get('etat') === 'erreur') { activeFilters.errors = true; syncErrorFilterUI(); }
+    const q = params.get('q');
+    if (q) {
+        const input = document.getElementById('search');
+        if (input) input.value = q;
+        searchQuery = q.trim();
+    }
+}
+
+function showRouteNotFound() {
+    const toast = document.createElement('div');
+    toast.className = 'route-toast';
+    toast.setAttribute('role', 'status');
+    toast.textContent = 'Lien introuvable : cette page a peut-être été déplacée. Utilise la recherche (touche /).';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 5000);
+}
 
 // Load bookmarks from bookmarks.csv (single source of truth)
 async function loadBookmarks() {
@@ -175,10 +420,15 @@ function buildFromCSV(rows) {
             stars:       row.stars ? parseInt(row.stars) : null,
             pushed_at:   row.pushed_at || '',
             archived:    row.archived === 'true',
+            license:     row.license || '',
+            licenseFamily: licenseFamily(row.license),
+            repo:        row.repo || (/^https:\/\/github\.com\/[^/]+\/[^/]+/.test(row.url) ? row.url : ''),
+            error:       row.error || '',   // lien mort détecté par scripts/bm-check.go
         });
     });
 
     sortFolders();
+    buildLicenseIndex();
 
     console.log('Built from CSV:', { folders: bookmarkData.folders.length, bookmarks: allBookmarks.length });
 }
@@ -197,6 +447,8 @@ let filterFocusIndex = null;
 function removeFilter(index, apply) {
     apply();
     syncDateFilterUI();
+    syncLicenseFilterUI();
+    syncErrorFilterUI();
     filterFocusIndex = index;
     displayBookmarks();
 }
@@ -215,6 +467,53 @@ function syncDateFilterUI() {
     });
 }
 
+// Aligne le menu « Toutes licences » sur activeFilters.license
+function syncLicenseFilterUI() {
+    const btn = document.getElementById('license-filter-btn');
+    const panel = document.getElementById('license-panel');
+    if (!btn || !panel) return;
+    const value = activeFilters.license || '';
+    panel.querySelectorAll('.date-option').forEach(o => {
+        const on = o.dataset.license === value;
+        o.classList.toggle('active', on);
+        o.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    btn.textContent = (value ? licenseFilterLabel(value) : 'Toutes licences') + ' ▾';
+}
+
+// Comptes par famille et licences précises les plus fréquentes, pour la liste affichée avant filtre licence
+function updateLicenseCounts(list) {
+    const panel = document.getElementById('license-panel');
+    if (!panel) return;
+    const famCount = {}, idCount = new Map();
+    list.forEach(b => {
+        const meta = bookmarkMeta.get(b.url);
+        const fam = meta?.licenseFamily || 'inconnue';
+        famCount[fam] = (famCount[fam] || 0) + 1;
+        licenseParts(meta?.license).forEach(id => idCount.set(id, (idCount.get(id) || 0) + 1));
+    });
+    panel.querySelectorAll('.date-option[data-license]').forEach(o => {
+        const key = o.dataset.license;
+        if (!key || !LICENSE_FILTERS[key]) return;
+        const n = Object.entries(famCount).filter(([f]) => LICENSE_FILTERS[key].match(f)).reduce((a, [, c]) => a + c, 0);
+        const el = o.querySelector('.opt-count');
+        if (el) el.textContent = n;
+        o.classList.toggle('is-empty', n === 0);
+    });
+    const all = panel.querySelector('.date-option[data-license=""] .opt-count');
+    if (all) all.textContent = list.length;
+
+    // Licences précises : les 10 plus fréquentes du contexte (+ celle du filtre actif)
+    const box = document.getElementById('license-precise');
+    if (!box) return;
+    const top = [...idCount.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 10);
+    const cur = activeFilters.license;
+    if (cur && !LICENSE_FILTERS[cur] && !top.some(([id]) => id === cur)) top.push([cur, idCount.get(cur) || 0]);
+    box.innerHTML = top.length ? '<span class="lic-precise-title">Licence précise</span>' + top.map(([id, n]) =>
+        `<button class="date-option" data-license="${escapeHtml(id)}" role="option" aria-selected="false"><span class="opt-label">${escapeHtml(id)}</span><span class="opt-count">${n}</span></button>`).join('') : '';
+    syncLicenseFilterUI();
+}
+
 function renderFilterBar() {
     let bar = document.getElementById('filter-bar');
     if (!bar) {
@@ -226,10 +525,22 @@ function renderFilterBar() {
     }
     bar.innerHTML = '';
 
-    const hasFilters = activeFilters.tags.length > 0 || activeFilters.dateRange;
+    const hasFilters = activeFilters.tags.length > 0 || activeFilters.dateRange || activeFilters.license || activeFilters.errors;
     bar.classList.toggle('hidden', !hasFilters);
 
     let index = 0;
+
+    // Liens en erreur
+    if (activeFilters.errors) {
+        const i = index++;
+        bar.appendChild(makeFilterChip('⚠ liens en erreur', () => removeFilter(i, () => { activeFilters.errors = false; })));
+    }
+
+    // Licence chip
+    if (activeFilters.license) {
+        const i = index++;
+        bar.appendChild(makeFilterChip('⚖ ' + licenseFilterLabel(activeFilters.license), () => removeFilter(i, () => { activeFilters.license = null; })));
+    }
 
     // Date chip
     if (activeFilters.dateRange) {
@@ -247,11 +558,11 @@ function renderFilterBar() {
     });
 
     // Clear all
-    if (activeFilters.tags.length > 1 || (activeFilters.tags.length > 0 && activeFilters.dateRange)) {
+    if ([activeFilters.tags.length > 0, activeFilters.tags.length > 1, !!activeFilters.dateRange, !!activeFilters.license, activeFilters.errors].filter(Boolean).length > 1) {
         const clearAll = document.createElement('button');
         clearAll.className = 'filter-clear-all';
         clearAll.textContent = 'Tout effacer';
-        clearAll.addEventListener('click', () => removeFilter(0, () => { activeFilters = { tags: [], dateRange: null }; }));
+        clearAll.addEventListener('click', () => removeFilter(0, () => { activeFilters = { tags: [], dateRange: null, license: null, errors: false }; }));
         bar.appendChild(clearAll);
     }
 
@@ -330,6 +641,58 @@ function initSortBar() {
             }
         });
     }
+}
+
+// Filtre « liens en erreur » : bouton bascule, visible seulement s'il existe des liens morts
+function initErrorFilter() {
+    const btn = document.getElementById('error-filter-btn');
+    if (!btn) return;
+    let count = 0;
+    bookmarkMeta.forEach(m => { if (m.error) count++; });
+    btn.textContent = `⚠ Erreurs (${count})`;
+    btn.hidden = count === 0 && !activeFilters.errors;
+    btn.addEventListener('click', () => {
+        activeFilters.errors = !activeFilters.errors;
+        syncErrorFilterUI();
+        // Activé depuis un dossier : remonter à l'accueil pour lister toutes les erreurs du site
+        if (activeFilters.errors && currentFolder) showFolder(null);
+        else displayBookmarks();
+    });
+}
+
+function syncErrorFilterUI() {
+    const btn = document.getElementById('error-filter-btn');
+    if (!btn) return;
+    btn.classList.toggle('active', activeFilters.errors);
+    btn.setAttribute('aria-pressed', activeFilters.errors ? 'true' : 'false');
+    if (activeFilters.errors) btn.hidden = false;
+}
+
+// Filtre licence — même dropdown thémé que le filtre date
+function initLicenseFilter() {
+    const btn = document.getElementById('license-filter-btn');
+    const panel = document.getElementById('license-panel');
+    if (!btn || !panel) return;
+    const close = () => { panel.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); };
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const open = panel.classList.toggle('open');
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    panel.querySelectorAll('.date-option[data-license]').forEach(o => {
+        if (LICENSE_HELP[o.dataset.license]) o.title = LICENSE_HELP[o.dataset.license];
+    });
+    // Délégation : les options « licence précise » sont recréées à chaque affichage
+    panel.addEventListener('click', (e) => {
+        const opt = e.target.closest('.date-option');
+        if (!opt) return;
+        activeFilters.license = opt.dataset.license || null;
+        syncLicenseFilterUI();
+        close();
+        displayBookmarks();
+    });
+    document.addEventListener('click', (e) => { if (!e.target.closest('#license-filter')) close(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
 }
 
 // ─── Import Chrome/Firefox bookmarks ──────────────────────────────────────
@@ -544,8 +907,9 @@ function createFolderItem(name, pathString, icon, level = 0) {
 }
 
 // Show bookmarks for a specific folder
-function showFolder(folderPath) {
+function showFolder(folderPath, opts = {}) {
     currentFolder = folderPath;
+    syncUrl(folderPath, opts);
 
     // Sauvegarder le dossier sélectionné
     if (folderPath !== null && folderPath !== undefined) {
@@ -610,16 +974,9 @@ function displayBookmarks() {
         grid.innerHTML = '';
         grid.classList.remove('transitioning');
 
-    let filtered = allBookmarks;
-
-    // Filter by folder
-    const hasActiveFilters = activeFilters.tags.length > 0 || activeFilters.dateRange;
-    if (currentFolder) {
-        filtered = filtered.filter(b => b.folder === currentFolder);
-    } else if (!searchQuery && !hasActiveFilters) {
-        // On home page without search ni filtre, show only bookmarks without folder
-        filtered = filtered.filter(b => !b.folder || b.folder === 'Root');
-    }
+    // Dossier courant (accueil = tout le catalogue tant qu'une recherche ou un filtre est actif)
+    let filtered = currentFolder ? allBookmarks.filter(b => b.folder === currentFolder) : allBookmarks;
+    const hasActiveFilters = activeFilters.tags.length > 0 || activeFilters.dateRange || activeFilters.license || activeFilters.errors;
 
     // Filter by search query (title, URL, description, tags)
     if (searchQuery) {
@@ -651,6 +1008,27 @@ function displayBookmarks() {
             return meta?.date_added && meta.date_added >= cutoff;
         });
     }
+
+    // Liens en erreur (à corriger)
+    if (activeFilters.errors) {
+        filtered = filtered.filter(b => bookmarkMeta.get(b.url)?.error);
+    }
+
+    // Comptes du menu licence : contexte courant (dossier, recherche, autres filtres), avant le filtre licence
+    updateLicenseCounts(filtered);
+
+    // Filtre licence : famille ou licence précise
+    if (activeFilters.license) {
+        const match = licenseMatcher(activeFilters.license);
+        filtered = filtered.filter(b => match(bookmarkMeta.get(b.url)));
+    }
+
+    // Accueil sans recherche ni filtre : seulement les liens hors dossier
+    if (!currentFolder && !searchQuery && !hasActiveFilters) {
+        filtered = filtered.filter(b => !b.folder || b.folder === 'Root');
+    }
+
+    syncQuery();
 
     renderFilterBar();
 
@@ -718,6 +1096,12 @@ function displayBookmarks() {
         rootFolders.forEach(folder => {
             grid.appendChild(createFolderCard(folder));
         });
+    }
+
+    // Route d'app : la carte demandée passe en tête (sinon le lazy loading peut la cacher)
+    if (highlightUrl) {
+        const i = filtered.findIndex(b => b.url === highlightUrl);
+        if (i > 0) filtered = [filtered[i], ...filtered.slice(0, i), ...filtered.slice(i + 1)];
     }
 
     // Lazy loading: stocker les bookmarks filtrés et afficher le premier lot
@@ -833,6 +1217,10 @@ function createBookmarkCard(bookmark) {
     const card = document.createElement('div');
     card.className = 'bookmark-card';
     card.dataset.url = bookmark.url;
+    if (highlightUrl && bookmark.url === highlightUrl) {
+        card.classList.add('route-highlight');
+        requestAnimationFrame(() => card.scrollIntoView({ block: 'center', behavior: 'smooth' }));
+    }
 
     // Accessibilité
     card.setAttribute('role', 'listitem');
@@ -922,10 +1310,20 @@ function createBookmarkCard(bookmark) {
             info.appendChild(dateEl);
         }
 
-        // Santé du dépôt GitHub : stars + inactivité
-        if (meta.stars != null || meta.pushed_at) {
+        // Santé du dépôt GitHub : stars + inactivité ; licence
+        if (meta.stars != null || meta.pushed_at || meta.license || meta.error) {
             const health = document.createElement('div');
             health.className = 'bookmark-health';
+
+            // Lien mort : signal prioritaire, détail (HTTP 404, DNS…) affiché pour la correction
+            if (meta.error) {
+                const err = document.createElement('span');
+                err.className = 'link-error';
+                err.textContent = `⚠ erreur · ${meta.error}`;
+                err.title = `Lien en erreur à la dernière vérification : ${meta.error}`;
+                health.appendChild(err);
+                card.classList.add('has-link-error');
+            }
 
             if (meta.stars != null) {
                 const starEl = document.createElement('span');
@@ -951,6 +1349,21 @@ function createBookmarkCard(bookmark) {
                     staleEl.title = `Dernier push : ${new Date(meta.pushed_at).toLocaleDateString('fr-FR')}`;
                     health.appendChild(staleEl);
                 }
+            }
+
+            // Licence : clic = filtrer sur la famille (tout le catalogue)
+            if (meta.license) {
+                const fam = LICENSE_FAMILIES[meta.licenseFamily];
+                const lic = document.createElement('button');
+                lic.type = 'button';
+                lic.className = 'lic-badge ' + fam.cls;
+                lic.textContent = licenseLabel(meta.license);
+                lic.title = `${fam.label} · ${meta.license}\n${LICENSE_HELP[meta.licenseFamily]}\nClic : voir tous les outils « ${LICENSE_FILTERS[meta.licenseFamily].label} »`;
+                lic.addEventListener('click', e => {
+                    e.stopPropagation();
+                    applyLicenseFilter(meta.licenseFamily, true);
+                });
+                health.appendChild(lic);
             }
 
             if (health.children.length > 0) info.appendChild(health);
@@ -998,8 +1411,20 @@ function createBookmarkCard(bookmark) {
         showSimilarPopover(bookmark, similarBtn);
     });
 
+    // Bouton permalien : copie l'adresse /categorie/sous-categorie/app de cette carte
+    const linkBtn = document.createElement('button');
+    linkBtn.className = 'similar-btn permalink-btn';
+    linkBtn.textContent = '#';
+    linkBtn.title = 'Copier le lien vers cette fiche';
+    linkBtn.setAttribute('aria-label', `Copier le lien vers ${bookmark.title}`);
+    linkBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (bookmark.route) copyPermalink(bookmark, card);
+    });
+
     card.appendChild(icon);
     card.appendChild(info);
+    if (bookmark.route) card.appendChild(linkBtn);
     card.appendChild(similarBtn);
     card.appendChild(favoriteBtn);
 
@@ -1230,10 +1655,26 @@ function buildSuggestionPool() {
         if (b.title)  nameSet.add(b.title);
     });
 
+    // Licences : familles (avec synonymes : « open source », « gpl »…) puis licences précises → appliquent le filtre
+    const famAliases = {
+        'libre':            'logiciel libre open source opensource foss oss free software',
+        'libre-permissive': 'permissive mit apache bsd',
+        'libre-copyleft':   'copyleft gpl agpl lgpl mpl',
+        'open-core':        'open core opencore enterprise ee',
+        'source-available': 'source available fair source busl sspl non libre',
+        'proprietaire':     'propriétaire proprietary fermé closed source saas',
+        'inconnue':         'licence inconnue sans licence',
+    };
+    const licSugs = [
+        ...Object.entries(LICENSE_FILTERS).map(([key, f]) => ({ label: 'Licence : ' + f.label, type: 'lic', key, match: f.label + ' ' + famAliases[key] })),
+        ...[...licenseIndex.values()].sort((a, b) => b.count - a.count).map(e => ({ label: 'Licence ' + e.id, type: 'lic', key: e.id, match: e.id })),
+    ];
+
     // tags en premier (plus utiles), puis catégories, puis noms
     suggestionPool = [
         ...Array.from(tagSet).map(t  => ({ label: t,    type: 'tag'  })),
         ...Array.from(catSet).map(c  => ({ label: c,    type: 'cat'  })),
+        ...licSugs,
         ...Array.from(nameSet).map(n => ({ label: n,    type: 'name' })),
     ];
 }
@@ -1241,11 +1682,12 @@ function buildSuggestionPool() {
 function getSuggestions(query) {
     if (!query || query.length < 2) return [];
     const q = query.toLowerCase();
-    const results = suggestionPool.filter(s => s.label.toLowerCase().includes(q));
+    const hay = s => (s.match || s.label).toLowerCase();
+    const results = suggestionPool.filter(s => hay(s).includes(q));
     // Trier : commence par la query en premier, puis contient
     results.sort((a, b) => {
-        const aStarts = a.label.toLowerCase().startsWith(q);
-        const bStarts = b.label.toLowerCase().startsWith(q);
+        const aStarts = hay(a).startsWith(q) || hay(a).includes(' ' + q);
+        const bStarts = hay(b).startsWith(q) || hay(b).includes(' ' + q);
         if (aStarts && !bStarts) return -1;
         if (!aStarts && bStarts) return 1;
         return a.label.localeCompare(b.label);
@@ -1254,6 +1696,7 @@ function getSuggestions(query) {
 }
 
 let selectedSuggestionIndex = -1;
+let currentSuggestions = [];
 
 function updateSuggestions(query) {
     const box = document.getElementById('search-suggestions');
@@ -1263,6 +1706,7 @@ function updateSuggestions(query) {
     if (!suggestions.length) { hideSuggestions(); return; }
 
     selectedSuggestionIndex = -1;
+    currentSuggestions = suggestions;
     box.innerHTML = '';
 
     suggestions.forEach((s, i) => {
@@ -1286,14 +1730,14 @@ function updateSuggestions(query) {
 
         const type = document.createElement('span');
         type.className = `suggestion-type suggestion-type--${s.type}`;
-        type.textContent = s.type === 'tag' ? '#' : s.type === 'cat' ? '/' : '→';
+        type.textContent = s.type === 'tag' ? '#' : s.type === 'cat' ? '/' : s.type === 'lic' ? '⚖' : '→';
 
         item.appendChild(type);
         item.appendChild(label);
 
         item.addEventListener('mousedown', (e) => {
             e.preventDefault(); // Éviter le blur du input
-            applySuggestion(s.label);
+            applySuggestion(s);
         });
 
         box.appendChild(item);
@@ -1302,12 +1746,20 @@ function updateSuggestions(query) {
     box.classList.remove('hidden');
 }
 
-function applySuggestion(value) {
+function applySuggestion(s) {
     const input = document.getElementById('search');
-    input.value = value;
-    searchQuery = value;
-    displayBookmarks();
     hideSuggestions();
+    // Licence : le texte tapé est remplacé par le filtre (chip ⚖), recherche dans tout le catalogue
+    if (s.type === 'lic') {
+        input.value = '';
+        searchQuery = '';
+        applyLicenseFilter(s.key, true);
+        input.focus();
+        return;
+    }
+    input.value = s.label;
+    searchQuery = s.label;
+    displayBookmarks();
     input.focus();
 }
 
@@ -1354,7 +1806,7 @@ document.addEventListener('keydown', (e) => {
         items.forEach((it, i) => it.classList.toggle('selected', i === selectedSuggestionIndex));
     } else if (e.key === 'Enter' && selectedSuggestionIndex >= 0) {
         e.preventDefault();
-        applySuggestion(items[selectedSuggestionIndex].querySelector('.suggestion-label').textContent);
+        applySuggestion(currentSuggestions[selectedSuggestionIndex]);
     } else if (e.key === 'Escape') {
         hideSuggestions();
     }
@@ -1579,12 +2031,12 @@ function clearBookmarkSelection(bookmarkCards) {
 
 // Réinitialiser la sélection quand on change de dossier
 const originalShowFolder = showFolder;
-showFolder = function(folderPath) {
+showFolder = function(folderPath, opts) {
     selectedBookmarkIndex = -1;
     if (keyboardMode === 'bookmarks') {
         keyboardMode = 'folders';
     }
-    originalShowFolder(folderPath);
+    originalShowFolder(folderPath, opts);
 };
 
 // ─── Feature FAVORIS ──────────────────────────────────────────────────────
@@ -1846,6 +2298,13 @@ function initStatsPanel() {
     });
     close?.addEventListener('click', closeStats);
     panel.addEventListener('click', e => { if (e.target === panel) closeStats(); });
+    // Section licences : clic sur une famille / une licence = filtre sur tout le catalogue
+    panel.addEventListener('click', e => {
+        const t = e.target.closest('[data-lic-filter]');
+        if (!t) return;
+        closeStats();
+        applyLicenseFilter(t.dataset.licFilter, true);
+    });
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape' && !panel.classList.contains('hidden')) closeStats();
     });
@@ -1918,10 +2377,31 @@ function renderStats() {
     });
     const topStarred = starred.sort((a, b) => b.stars - a.stars).slice(0, 10);
 
+    // Licences : familles, licences précises, part de libre par catégorie
+    const famOrder = ['libre-permissive', 'libre-copyleft', 'open-core', 'source-available', 'proprietaire', 'inconnue'];
+    const zeroFam = () => Object.fromEntries(famOrder.map(f => [f, 0]));
+    const famCount = zeroFam();
+    const catFam = {};
+    allBookmarks.forEach(b => {
+        const fam = bookmarkMeta.get(b.url)?.licenseFamily || 'inconnue';
+        famCount[fam]++;
+        const root = (b.folder || '').split(' > ')[0] || 'Sans catégorie';
+        (catFam[root] ||= zeroFam())[fam]++;
+    });
+    const pct = (n, of = total) => of ? Math.round(n / of * 100) : 0;
+    const libreN = famCount['libre-permissive'] + famCount['libre-copyleft'];
+    const famTitle = c => famOrder.filter(f => c[f]).map(f => `${LICENSE_FAMILIES[f].label} : ${c[f]}`).join(' · ');
+    const stack = (c, n) => famOrder.filter(f => c[f]).map(f => `<span class="seg-${f}" style="width:${c[f] / n * 100}%"></span>`).join('');
+    const topLicenses = [...licenseIndex.values()].sort((a, b) => b.count - a.count || a.id.localeCompare(b.id)).slice(0, 12);
+    const catLibre = Object.entries(catFam).map(([cat, c]) => {
+        const n = famOrder.reduce((a, f) => a + c[f], 0);
+        return { cat, c, n, libre: (c['libre-permissive'] + c['libre-copyleft']) / n };
+    }).sort((a, b) => b.libre - a.libre);
+
     el.innerHTML = `
         <div class="stats-kpis">
             <div class="stats-kpi"><span class="kpi-value">${total}</span><span class="kpi-label">Bookmarks</span></div>
-            <div class="stats-kpi"><span class="kpi-value">${topCats.length}</span><span class="kpi-label">Catégories</span></div>
+            <div class="stats-kpi"><span class="kpi-value">${Object.keys(catCount).length}</span><span class="kpi-label">Catégories</span></div>
             <div class="stats-kpi"><span class="kpi-value">${Object.keys(domCount).length}</span><span class="kpi-label">Domaines</span></div>
             <div class="stats-kpi"><span class="kpi-value">${Math.round(withMeta/total*100)}%</span><span class="kpi-label">Avec description</span></div>
         </div>
@@ -1944,6 +2424,41 @@ function renderStats() {
                 </div>`).join('')}
         </div>
         ` : ''}
+
+        <div class="stats-section">
+            <h3>Licences — clic pour filtrer · <a class="stats-help-link" href="/licences.html">comprendre les licences</a></h3>
+            <div class="stats-kpis">
+                <button class="stats-kpi stats-kpi-btn" data-lic-filter="libre" title="${escapeHtml(LICENSE_HELP.libre)}"><span class="kpi-value">${pct(libreN)} %</span><span class="kpi-label">100 % libre (${libreN})</span></button>
+                <button class="stats-kpi stats-kpi-btn" data-lic-filter="open-core" title="${escapeHtml(LICENSE_HELP['open-core'])}"><span class="kpi-value">${famCount['open-core']}</span><span class="kpi-label">Open-core</span></button>
+                <button class="stats-kpi stats-kpi-btn" data-lic-filter="source-available" title="Source disponible (BUSL, SSPL, sans licence…) — propriétaires à part"><span class="kpi-value">${famCount['source-available'] + famCount['proprietaire']}</span><span class="kpi-label">Non libres</span></button>
+                <button class="stats-kpi stats-kpi-btn" data-lic-filter="inconnue" title="Aucun dépôt identifié : licence à renseigner"><span class="kpi-value">${famCount.inconnue}</span><span class="kpi-label">Licence inconnue</span></button>
+            </div>
+            <div class="lic-stack" role="img" aria-label="${escapeHtml(famTitle(famCount))}" title="${escapeHtml(famTitle(famCount))}">${stack(famCount, total)}</div>
+            <div class="lic-legend">
+                ${famOrder.map(f => `<button class="lic-legend-item" data-lic-filter="${f}" title="${escapeHtml(LICENSE_HELP[f])}"><span class="lic-swatch seg-${f}"></span>${escapeHtml(LICENSE_FILTERS[f].label)} <em>${famCount[f]} · ${pct(famCount[f])} %</em></button>`).join('')}
+            </div>
+        </div>
+
+        <div class="stats-cols">
+            <div class="stats-section">
+                <h3>Licences les plus fréquentes</h3>
+                ${topLicenses.map(l => `
+                    <button class="stats-bar-row stats-row-btn" data-lic-filter="${escapeHtml(l.id)}" title="Voir les ${l.count} outils sous ${escapeHtml(l.id)}">
+                        <span class="stats-bar-name">${escapeHtml(l.id)}</span>
+                        <span class="stats-bar-track"><span class="stats-bar-fill" style="width:${Math.round(l.count / topLicenses[0].count * 100)}%"></span></span>
+                        <span class="stats-bar-count">${l.count}</span>
+                    </button>`).join('')}
+            </div>
+            <div class="stats-section">
+                <h3>Part de libre par catégorie</h3>
+                ${catLibre.map(r => `
+                    <div class="stats-bar-row" title="${escapeHtml(r.cat + ' — ' + famTitle(r.c))}">
+                        <span class="stats-bar-name">${escapeHtml(r.cat)}</span>
+                        <span class="stats-bar-track lic-stack-row">${stack(r.c, r.n)}</span>
+                        <span class="stats-bar-count">${Math.round(r.libre * 100)} %</span>
+                    </div>`).join('')}
+            </div>
+        </div>
 
         <div class="stats-section">
             <h3>Ajouts — 12 derniers mois</h3>
@@ -1994,6 +2509,7 @@ function formatDateShort(timestamp) {
 
 // Formate un nombre de stars : 1234 → "1.2k", 12345 → "12k"
 function formatStars(n) {
+    if (n >= 1e6) return (n / 1e6).toFixed(1).replace('.0', '') + 'M';
     if (n >= 1000) return (n / 1000).toFixed(n < 10000 ? 1 : 0).replace('.0', '') + 'k';
     return String(n);
 }

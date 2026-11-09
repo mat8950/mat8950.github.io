@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprendre les licences logicielles — Marque-pages tech</title>
+    <meta name="description" content="Guide des licences des outils référencés : libre permissive (MIT, Apache-2.0), copyleft (GPL, AGPL), open-core, source disponible (BUSL, SSPL, Elastic), propriétaire. Ce que chacune autorise, selon votre usage.">
+    <meta name="theme-color" content="#0a0a0f">
+    <link rel="canonical" href="https://mat8950.github.io/licences.html">
+    <link rel="icon" href="/favicon.ico" sizes="32x32">
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/css/page.css">
+    <script>try { document.documentElement.dataset.theme = localStorage.getItem('theme') || 'dark'; } catch (e) {}</script>
+</head>
+<body>
+    <main class="wide">
+        <h1>Comprendre les licences</h1>
+        <p class="muted">Guide du catalogue · mis à jour le 9 novembre 2026</p>
+
+        <p>La licence d'un logiciel fixe ce que vous avez le droit d'en faire : l'utiliser au travail, le modifier, l'héberger pour d'autres, l'intégrer à un produit que vous vendez. Sur ce site, chaque outil porte un badge de licence coloré. Le menu <strong>« Toutes licences »</strong> filtre le catalogue par famille ou par licence précise. Un clic sur un badge affiche tous les outils de la même famille.</p>
+        <p class="note">Ce guide simplifie : ce n'est pas un avis juridique et seul le texte de la licence fait foi. Avant un usage commercial, lisez le fichier <code>LICENSE</code> de l'outil.</p>
+
+        <nav class="toc" aria-label="Sommaire">
+            <a href="#apercu">En un coup d'œil</a>
+            <a href="#libre-permissive">Permissive</a>
+            <a href="#libre-copyleft">Copyleft</a>
+            <a href="#open-core">Open-core</a>
+            <a href="#source-available">Source disponible</a>
+            <a href="#proprietaire">Propriétaire</a>
+            <a href="#inconnue">Inconnue</a>
+            <a href="#usage">Selon votre usage</a>
+            <a href="#licences">Licences courantes</a>
+            <a href="#methode">Méthode</a>
+            <a href="#lexique">Lexique</a>
+        </nav>
+
+        <h2 id="apercu">Les familles en un coup d'œil</h2>
+        <p><strong>« 100 % libre »</strong> regroupe les deux premières familles : des licences reconnues par l'<abbr title="Open Source Initiative">OSI</abbr> et la <abbr title="Free Software Foundation">FSF</abbr>, qui garantissent les quatre libertés (utiliser, étudier, modifier, redistribuer). Elles couvrent <strong><span data-pct-libre>78</span> %</strong> du catalogue. <a href="/?licence=libre">Voir les outils 100 % libres<span class="cnt" data-fam="libre"></span></a></p>
+        <div class="table-wrap">
+            <table>
+                <caption class="sr-only">Ce que chaque famille de licence autorise</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Famille</th>
+                        <th scope="col">Usage en entreprise</th>
+                        <th scope="col">Modifier et redistribuer</th>
+                        <th scope="col">Héberger pour des clients</th>
+                        <th scope="col">Exemples</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th scope="row"><a class="fam fam-libre-permissive" href="#libre-permissive">Libre permissive</a></th>
+                        <td>Oui</td>
+                        <td>Oui, en gardant la mention de licence</td>
+                        <td>Oui</td>
+                        <td>MIT, Apache-2.0, BSD</td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><a class="fam fam-libre-copyleft" href="#libre-copyleft">Libre copyleft</a></th>
+                        <td>Oui</td>
+                        <td>Oui, sous la même licence, code source fourni</td>
+                        <td>Oui (AGPL : publier vos modifications)</td>
+                        <td>GPL, AGPL, LGPL, MPL</td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><a class="fam fam-open-core" href="#open-core">Open-core</a></th>
+                        <td>Oui, édition libre ; modules entreprise payants</td>
+                        <td>Le cœur oui ; les modules entreprise non</td>
+                        <td>Le cœur selon sa licence</td>
+                        <td>GitLab, Metabase, Mattermost</td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><a class="fam fam-source-available" href="#source-available">Source disponible</a></th>
+                        <td>Souvent oui (sauf licences non commerciales)</td>
+                        <td>Limité</td>
+                        <td>Souvent interdit sans accord</td>
+                        <td>BUSL, SSPL, Elastic, sans licence</td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><a class="fam fam-proprietaire" href="#proprietaire">Propriétaire</a></th>
+                        <td>Selon le contrat</td>
+                        <td>Non</td>
+                        <td>Non</td>
+                        <td>Postman, VMware, ChatGPT</td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><a class="fam fam-inconnue" href="#inconnue">Inconnue</a></th>
+                        <td colspan="3">À vérifier sur le site de l'outil</td>
+                        <td>—</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <section class="family">
+            <h2 id="libre-permissive"><span class="sw sw-libre-permissive" aria-hidden="true"></span>Libre — permissive</h2>
+            <p>Vous faites presque tout ce que vous voulez : usage commercial, modification, revente, intégration dans un logiciel fermé. La seule obligation : garder la mention de copyright et le texte de la licence dans les copies.</p>
+            <ul>
+                <li><strong>MIT</strong>, <strong>ISC</strong> : quelques lignes, les plus simples.</li>
+                <li><strong>Apache-2.0</strong> : ajoute une licence explicite sur les brevets ; signaler les fichiers modifiés et garder le fichier <code>NOTICE</code>.</li>
+                <li><strong>BSD-2-Clause / BSD-3-Clause</strong> : comme MIT ; la 3-Clause interdit d'utiliser le nom des auteurs pour votre publicité.</li>
+                <li><strong>CC0-1.0</strong>, <strong>Unlicense</strong> : versement au domaine public, sans aucune condition.</li>
+            </ul>
+            <p><a href="/?licence=libre-permissive">Voir les outils sous licence permissive<span class="cnt" data-fam="libre-permissive"></span></a></p>
+        </section>
+
+        <section class="family">
+            <h2 id="libre-copyleft"><span class="sw sw-libre-copyleft" aria-hidden="true"></span>Libre — copyleft</h2>
+            <p>Mêmes libertés que les licences permissives, avec une règle de réciprocité : si vous <em>distribuez</em> une version modifiée (ou un programme qui l'intègre), elle doit rester sous la même licence, avec son code source. Utiliser l'outil ou l'auto-héberger pour vous-même n'impose rien.</p>
+            <ul>
+                <li><strong>GPL-2.0 / GPL-3.0</strong> (copyleft fort) : tout programme distribué qui intègre du code GPL passe sous GPL. Proposer un service en ligne n'est pas une distribution : pas d'obligation.</li>
+                <li><strong>AGPL-3.0</strong> : la GPL avec une clause réseau. Si vous modifiez l'outil et que des utilisateurs s'en servent par le réseau (SaaS, intranet), ils doivent pouvoir obtenir le code de votre version. Très fréquente sur les outils auto-hébergeables.</li>
+                <li><strong>LGPL</strong> (copyleft faible) : une bibliothèque LGPL peut être utilisée par un logiciel fermé ; seules les modifications de la bibliothèque elle-même doivent être partagées.</li>
+                <li><strong>MPL-2.0</strong>, <strong>EPL-2.0</strong> (copyleft par fichier) : seuls les fichiers modifiés restent sous la licence ; ils peuvent cohabiter avec du code fermé.</li>
+                <li><strong>EUPL-1.2</strong> : licence copyleft de l'Union européenne, compatible avec GPL, AGPL, MPL et d'autres.</li>
+                <li><strong>CC-BY-SA</strong> : équivalent pour les contenus (documentation, listes) : réutilisation libre si vous partagez sous la même licence.</li>
+            </ul>
+            <p><a href="/?licence=libre-copyleft">Voir les outils sous licence copyleft<span class="cnt" data-fam="libre-copyleft"></span></a></p>
+        </section>
+
+        <section class="family">
+            <h2 id="open-core"><span class="sw sw-open-core" aria-hidden="true"></span>Open-core</h2>
+            <p>Le cœur du logiciel est libre (MIT, Apache-2.0, AGPL…) ; des modules « entreprise » (SSO, journal d'audit, gestion fine des droits, support) sont sous licence commerciale, souvent dans un dossier <code>ee/</code> du dépôt. L'édition communautaire s'auto-héberge gratuitement ; les fonctions avancées demandent un abonnement.</p>
+            <p>Sur ce site, la licence s'écrit <code>X+EE</code> : <code>MIT+EE</code> (GitLab, Infisical, Authentik), <code>AGPL-3.0+EE</code> (Metabase, Mattermost, Twenty), <code>Apache-2.0+EE</code> (Dokploy, SuperTokens).</p>
+            <p><a href="/?licence=open-core">Voir les outils open-core<span class="cnt" data-fam="open-core"></span></a></p>
+        </section>
+
+        <section class="family">
+            <h2 id="source-available"><span class="sw sw-source-available" aria-hidden="true"></span>Source disponible (non libre)</h2>
+            <p>Le code est public, vous pouvez le lire et souvent l'utiliser en interne, mais des restrictions empêchent de parler de logiciel libre : pas de revente, pas d'offre hébergée concurrente, ou pas d'usage commercial du tout. Ces licences ne sont pas approuvées par l'OSI.</p>
+            <ul>
+                <li><strong>BUSL-1.1</strong> (Business Source License : Terraform, Vault) : usage en production limité par une clause propre à chaque éditeur (souvent : tout sauf un service concurrent). Chaque version devient libre à une date fixée, au plus tard 4 ans après sa sortie.</li>
+                <li><strong>FSL</strong> (Functional Source License : GitButler) : tout usage sauf concurrent ; chaque version devient MIT ou Apache-2.0 après 2 ans.</li>
+                <li><strong>SSPL-1.0</strong> (MongoDB) : qui propose le logiciel en service doit publier le code de tout son service (supervision, sauvegardes, interface…). En pratique, un accord commercial.</li>
+                <li><strong>Elastic-2.0</strong> : interdit de le proposer à des tiers en service hébergé ou managé, et de contourner les clés de licence.</li>
+                <li><strong>SUL</strong> (Sustainable Use License : n8n) : usage pour vos besoins internes ou personnels ; pas de revente ni d'hébergement commercial pour des clients.</li>
+                <li><strong>PolyForm</strong> : variantes à lire (<em>Noncommercial</em> : aucun usage commercial ; <em>Perimeter</em> : tout sauf un produit concurrent).</li>
+                <li><strong>Commons Clause</strong> : ajoutée à une licence libre, elle retire le droit de vendre le logiciel ou un service qui repose dessus.</li>
+                <li><strong>CC-BY-NC</strong> : contenus réutilisables, mais pas à des fins commerciales.</li>
+                <li><strong>Sans licence</strong> (« sans licence » sur le badge) : le droit d'auteur s'applique par défaut. Vous pouvez lire le code (et le forker sur GitHub), mais pas le réutiliser ni le redistribuer légalement.</li>
+                <li><strong>Licences maison</strong> (Remotion, Open WebUI…) et licences de modèles d'IA à usages restreints (<em>OpenRAIL</em>) : lire le texte au cas par cas.</li>
+            </ul>
+            <p><a href="/?licence=source-available">Voir les outils source disponible<span class="cnt" data-fam="source-available"></span></a></p>
+        </section>
+
+        <section class="family">
+            <h2 id="proprietaire"><span class="sw sw-proprietaire" aria-hidden="true"></span>Propriétaire</h2>
+            <p>Code fermé : l'usage est réglé par les conditions de l'éditeur (abonnement, offre gratuite limitée, licence par poste). Souvent un service en ligne non auto-hébergeable. Ces outils restent au catalogue quand ils sont des références de leur domaine (Postman, VMware, ChatGPT).</p>
+            <p><a href="/?licence=proprietaire">Voir les outils propriétaires<span class="cnt" data-fam="proprietaire"></span></a></p>
+        </section>
+
+        <section class="family">
+            <h2 id="inconnue"><span class="sw sw-inconnue" aria-hidden="true"></span>Licence inconnue</h2>
+            <p>Le site n'a pas trouvé le dépôt de l'outil (site officiel sans lien sûr vers GitHub), ou GitHub ne reconnaît pas la licence. Vérifiez sur le site de l'outil avant de l'adopter.</p>
+            <p><a href="/?licence=inconnue">Voir les outils à licence inconnue<span class="cnt" data-fam="inconnue"></span></a></p>
+        </section>
+
+        <h2 id="usage">Quelle licence selon votre usage ?</h2>
+        <dl class="usage">
+            <dt>Utiliser ou auto-héberger l'outil pour vous ou votre équipe</dt>
+            <dd>Toutes les licences libres, l'édition communautaire des open-core, et la plupart des licences source disponible (BUSL, Elastic, SSPL, SUL autorisent l'usage interne). Attention aux licences <em>non commerciales</em> (PolyForm Noncommercial, CC-BY-NC) : pas d'usage en entreprise.</dd>
+
+            <dt>Modifier l'outil pour vos besoins</dt>
+            <dd>Libre : oui, sans rien publier tant que vous ne distribuez pas. AGPL : si d'autres utilisent votre version modifiée par le réseau, ils doivent pouvoir obtenir son code.</dd>
+
+            <dt>L'intégrer à un produit fermé que vous distribuez ou vendez</dt>
+            <dd>Permissive : oui, en gardant les mentions. LGPL, MPL : oui, si la bibliothèque ou les fichiers modifiés restent ouverts. GPL, AGPL : seulement si votre produit est publié sous une licence compatible. Source disponible et propriétaire : accord de l'éditeur.</dd>
+
+            <dt>Le proposer en service hébergé à des clients (SaaS, offre managée)</dt>
+            <dd>Permissive et GPL : oui. AGPL : oui, en publiant vos modifications. Open-core : le cœur selon sa licence, les modules entreprise sous contrat. BUSL, Elastic, FSL, SUL, SSPL, Commons Clause : généralement interdit sans accord commercial.</dd>
+        </dl>
+
+        <h2 id="licences">Les licences les plus courantes du catalogue</h2>
+        <p>Chaque lien filtre le catalogue sur cette licence (licences au choix « X OR Y » et cœurs d'open-core compris).</p>
+        <ul class="lic-list">
+            <li><a href="/?licence=MIT">MIT<span class="cnt" data-lic="MIT"></span></a> <span class="sw sw-libre-permissive" aria-hidden="true"></span>permissive</li>
+            <li><a href="/?licence=Apache-2.0">Apache-2.0<span class="cnt" data-lic="Apache-2.0"></span></a> <span class="sw sw-libre-permissive" aria-hidden="true"></span>permissive</li>
+            <li><a href="/?licence=BSD-3-Clause">BSD-3-Clause<span class="cnt" data-lic="BSD-3-Clause"></span></a> <span class="sw sw-libre-permissive" aria-hidden="true"></span>permissive</li>
+            <li><a href="/?licence=CC0-1.0">CC0-1.0<span class="cnt" data-lic="CC0-1.0"></span></a> <span class="sw sw-libre-permissive" aria-hidden="true"></span>domaine public</li>
+            <li><a href="/?licence=AGPL-3.0">AGPL-3.0<span class="cnt" data-lic="AGPL-3.0"></span></a> <span class="sw sw-libre-copyleft" aria-hidden="true"></span>copyleft + réseau</li>
+            <li><a href="/?licence=GPL-3.0">GPL-3.0<span class="cnt" data-lic="GPL-3.0"></span></a> <span class="sw sw-libre-copyleft" aria-hidden="true"></span>copyleft fort</li>
+            <li><a href="/?licence=GPL-2.0">GPL-2.0<span class="cnt" data-lic="GPL-2.0"></span></a> <span class="sw sw-libre-copyleft" aria-hidden="true"></span>copyleft fort</li>
+            <li><a href="/?licence=MPL-2.0">MPL-2.0<span class="cnt" data-lic="MPL-2.0"></span></a> <span class="sw sw-libre-copyleft" aria-hidden="true"></span>copyleft par fichier</li>
+            <li><a href="/?licence=BUSL-1.1">BUSL-1.1<span class="cnt" data-lic="BUSL-1.1"></span></a> <span class="sw sw-source-available" aria-hidden="true"></span>source disponible</li>
+            <li><a href="/?licence=SSPL-1.0">SSPL-1.0<span class="cnt" data-lic="SSPL-1.0"></span></a> <span class="sw sw-source-available" aria-hidden="true"></span>source disponible</li>
+        </ul>
+
+        <h2 id="methode">Comment le site classe un outil</h2>
+        <ol>
+            <li>La licence vient de GitHub, qui la détecte sur le dépôt (identifiant <abbr title="Software Package Data Exchange">SPDX</abbr> : <code>MIT</code>, <code>AGPL-3.0</code>…). Pour un outil présenté par son site officiel, le dépôt est retrouvé automatiquement quand le lien est sûr.</li>
+            <li>Licence non reconnue par GitHub (texte modifié, licence maison) : le fichier <code>LICENSE</code> est lu et la valeur saisie à la main.</li>
+            <li>Licences au choix (« X OR Y ») : la plus libre compte, puisque vous pouvez la choisir. Exemple : Redis (<code>AGPL-3.0 OR SSPL-1.0 OR RSALv2</code>) est classé copyleft.</li>
+            <li>Licences cumulées (« X AND Y ») : la plus contraignante compte.</li>
+            <li><code>X+EE</code> : open-core si le cœur X est libre ; sinon source disponible (n8n : <code>SUL+EE</code>).</li>
+            <li>Dépôt sans fichier de licence : source disponible (tous droits réservés).</li>
+        </ol>
+        <p>Les données sont aussi publiées pour les IA et les scripts : <a href="/api/apps.json">catalogue JSON</a> (champs <code>license</code> et <code>license_family</code>), <a href="/llms.txt">llms.txt</a>. Une erreur de classement ? <a href="https://github.com/mat8950/mat8950.github.io/issues" rel="noopener">Ouvrez une issue</a>.</p>
+
+        <h2 id="lexique">Lexique</h2>
+        <dl class="glossary">
+            <dt>Logiciel libre</dt>
+            <dd>Logiciel qui garantit quatre libertés (définition de la FSF) : l'utiliser pour tout usage, étudier son code, le modifier, redistribuer des copies modifiées ou non.</dd>
+            <dt>Open source</dt>
+            <dd>Définition de l'OSI, aux critères très proches. En pratique, les mêmes licences sont à la fois libres et open source.</dd>
+            <dt>Copyleft</dt>
+            <dd>Obligation de garder la même licence pour les versions modifiées que l'on distribue.</dd>
+            <dt>Distribuer</dt>
+            <dd>Donner ou vendre une copie : binaire, image Docker, application. Héberger un service en ligne n'est pas une distribution, sauf pour l'AGPL et la SSPL qui couvrent l'usage par le réseau.</dd>
+            <dt>Source disponible (<em>source-available</em>, <em>fair source</em>)</dt>
+            <dd>Code public mais droits limités, parfois libéré après un délai (BUSL, FSL).</dd>
+            <dt>SPDX</dt>
+            <dd>Liste standard des identifiants de licence (<code>Apache-2.0</code>, <code>GPL-3.0-or-later</code>…), utilisée par GitHub et par ce site.</dd>
+        </dl>
+
+        <a class="back" href="/">← Retour aux marque-pages</a>
+    </main>
+    <script>
+        // Comptes du catalogue (api/categories.json) ; sans réseau, les liens restent valables sans chiffres
+        fetch('/api/categories.json').then(r => r.ok ? r.json() : null).then(d => {
+            const s = d && d.license_stats;
+            if (!s) return;
+            const f = Object.assign({}, s.families);
+            f.libre = (f['libre-permissive'] || 0) + (f['libre-copyleft'] || 0);
+            const ids = {};
+            (s.licenses || []).forEach(l => { ids[l.id.toLowerCase()] = l.count; });
+            document.querySelectorAll('[data-fam]').forEach(el => {
+                if (f[el.dataset.fam] != null) el.textContent = ' (' + f[el.dataset.fam] + ')';
+            });
+            document.querySelectorAll('[data-lic]').forEach(el => {
+                const n = ids[el.dataset.lic.toLowerCase()];
+                if (n) el.textContent = ' (' + n + ')';
+            });
+            document.querySelectorAll('[data-pct-libre]').forEach(el => { el.textContent = s.libre_percent; });
+        }).catch(() => {});
+    </script>
+</body>
+</html>

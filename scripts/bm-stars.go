@@ -4,6 +4,12 @@
 //   - archived   : "true" si le dépôt est archivé (signal d'abandon fort)
 //   - tags       : dérivés des topics GitHub (+ langage) UNIQUEMENT si la colonne est vide
 //     (les tags curés manuellement ou par bm-enrich ne sont jamais écrasés)
+//   - license    : identifiant SPDX détecté par GitHub (MIT, AGPL-3.0…), "Aucune" si le dépôt n'a pas
+//     de licence. Une valeur saisie à la main n'est jamais écrasée : open-core « MIT+EE »,
+//     « Propriétaire », « X OR Y », licence maison (BUSL-1.1, SUL, PolyForm-…) posée sur un NOASSERTION.
+//
+// Dépôt interrogé : l'URL elle-même si c'est github.com/owner/repo, sinon la colonne `repo`
+// (remplie par bm-repo.go pour les entrées pointant vers un site officiel).
 //
 // Les colonnes manquantes sont créées automatiquement.
 //
@@ -31,6 +37,9 @@ type ghRepoStats struct {
 	Topics   []string `json:"topics"`
 	Language string   `json:"language"`
 	Archived bool     `json:"archived"`
+	License  *struct {
+		SPDX string `json:"spdx_id"`
+	} `json:"license"`
 }
 
 // tagsFromGitHub construit une liste de tags pipe-séparée depuis les topics
@@ -124,6 +133,8 @@ func main() {
 	starsIdx := colIdx("stars")
 	pushedIdx := colIdx("pushed_at")
 	archivedIdx := colIdx("archived")
+	licenseIdx := colIdx("license")
+	repoIdx := colIdx("repo")
 	width := len(headers)
 
 	// Normalise la largeur de chaque ligne
@@ -146,6 +157,9 @@ func main() {
 		rawURL := rows[i][urlIdx]
 		owner, repo, ok := parseGitHubRepo(rawURL)
 		if !ok {
+			owner, repo, ok = parseGitHubRepo(rows[i][repoIdx])
+		}
+		if !ok {
 			continue
 		}
 		ghCount++
@@ -164,6 +178,20 @@ func main() {
 		} else {
 			rows[i][archivedIdx] = ""
 		}
+		// Licence : une valeur saisie à la main (open-core « +EE », « Propriétaire », combinaison
+		// « X OR Y », licence maison…) n'est jamais écrasée. Sinon : SPDX détecté → à jour ;
+		// NOASSERTION ou aucune licence → seulement si la colonne est vide.
+		cur := strings.TrimSpace(rows[i][licenseIdx])
+		manual := strings.ContainsAny(cur, "+ ") || strings.HasPrefix(cur, "Propri") || cur == "Open-core"
+		switch {
+		case manual:
+		case stats.License == nil || stats.License.SPDX == "":
+			if cur == "" {
+				rows[i][licenseIdx] = "Aucune" // pas de fichier licence : tous droits réservés par défaut
+			}
+		case stats.License.SPDX != "NOASSERTION" || cur == "" || cur == "Aucune":
+			rows[i][licenseIdx] = stats.License.SPDX
+		}
 		// Tags : remplir depuis les topics seulement si la colonne est vide
 		tagsFilled := ""
 		if strings.TrimSpace(rows[i][tagsIdx]) == "" {
@@ -177,7 +205,7 @@ func main() {
 		if stats.Archived {
 			flag = " 🗄 archivé"
 		}
-		fmt.Printf("[%d] %s/%s → ⭐ %d (push %s)%s%s\n", okCount, owner, repo, stats.Stars, rows[i][pushedIdx], flag, tagsFilled)
+		fmt.Printf("[%d] %s/%s → ⭐ %d (push %s) %s%s%s\n", okCount, owner, repo, stats.Stars, rows[i][pushedIdx], rows[i][licenseIdx], flag, tagsFilled)
 	}
 
 	// Réécriture

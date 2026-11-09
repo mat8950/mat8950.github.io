@@ -22,7 +22,7 @@ const (
 	migrateCSVFile  = "bookmarks.csv"
 )
 
-var csvHeaders = []string{"url", "name", "category", "subcategory", "description", "tags", "date_added", "stars", "pushed_at", "archived"}
+var csvHeaders = []string{"url", "name", "category", "subcategory", "description", "tags", "date_added", "stars", "pushed_at", "archived", "repo", "license", "error"}
 
 type bmBookmark struct {
 	URL         string
@@ -48,6 +48,9 @@ type bmCSVRow struct {
 	Stars       string // GitHub stargazers (rempli par bm-stars.go)
 	PushedAt    string // GitHub dernier push ISO8601 (rempli par bm-stars.go)
 	Archived    string // "true" si dépôt archivé (rempli par bm-stars.go)
+	License     string // SPDX (rempli par bm-stars.go, ou à la main)
+	Repo        string // dépôt GitHub d'une entrée « site officiel » (rempli par bm-repo.go)
+	Error       string // lien mort détecté par bm-check.go (vide = OK)
 }
 
 var addedHrefRe = regexp.MustCompile(`(?m)^\+[^+].*<A HREF="([^"]+)"`)
@@ -105,7 +108,11 @@ func main() {
 				skippedCount++
 				continue
 			}
-			meta := htmlMeta[u]
+			// URL retirée depuis de bookmarks.html : ne pas la ressusciter (ligne vide sans nom ni catégorie)
+			meta, inHTML := htmlMeta[u]
+			if !inHTML {
+				continue
+			}
 			existing[u] = bmCSVRow{
 				URL:         u,
 				Name:        meta.Name,
@@ -333,6 +340,9 @@ func migrateLoadCSV(path string) (map[string]bmCSVRow, error) {
 			Stars:       get(row, "stars"),
 			PushedAt:    get(row, "pushed_at"),
 			Archived:    get(row, "archived"),
+			License:     get(row, "license"),
+			Repo:        get(row, "repo"),
+			Error:       get(row, "error"),
 		}
 	}
 	return data, nil
@@ -343,8 +353,12 @@ func migrateSaveCSV(path string, data map[string]bmCSVRow) error {
 	for _, r := range data {
 		rows = append(rows, r)
 	}
+	// Ordre déterministe (date puis URL) : sinon l'ordre d'une map Go change à chaque exécution → diff git bruité
 	sort.Slice(rows, func(i, j int) bool {
-		return rows[i].DateAdded < rows[j].DateAdded
+		if rows[i].DateAdded != rows[j].DateAdded {
+			return rows[i].DateAdded < rows[j].DateAdded
+		}
+		return rows[i].URL < rows[j].URL
 	})
 
 	f, err := os.Create(path)
@@ -360,7 +374,7 @@ func migrateSaveCSV(path string, data map[string]bmCSVRow) error {
 		writer.Write([]string{
 			r.URL, r.Name, r.Category, r.Subcategory,
 			r.Description, r.Tags, strconv.FormatInt(r.DateAdded, 10),
-			r.Stars, r.PushedAt, r.Archived,
+			r.Stars, r.PushedAt, r.Archived, r.Repo, r.License, r.Error,
 		})
 	}
 	writer.Flush()

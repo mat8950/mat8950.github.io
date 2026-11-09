@@ -33,16 +33,22 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Pages
         uses: actions/configure-pages@v5
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Données pour les IA (api/*.json + llms.txt, toujours régénérées depuis bookmarks.csv)
+        run: go run ./scripts/bm-api.go
       - name: Build site (fichiers publics uniquement)
         # Liste blanche : CLAUDE.md, scripts/, app*.link.txt, extension/… ne sont plus publiés.
         # Nouveau fichier servi par le site → l'ajouter ici. Échoue si un fichier manque.
         run: |
           set -euo pipefail
           mkdir -p _site
-          cp index.html 404.html mentions-legales.html robots.txt sitemap.xml \
+          cp index.html 404.html mentions-legales.html licences.html robots.txt sitemap.xml \
              favicon.ico og-image.png manifest.json sw.js script.js \
-             bookmarks.csv bookmarks.html ambient.mp3 _site/
-          cp -r css fonts lib icons _site/
+             bookmarks.csv bookmarks.html ambient.mp3 llms.txt _site/
+          cp -r css fonts lib icons api _site/
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
