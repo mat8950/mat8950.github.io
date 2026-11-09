@@ -1139,8 +1139,12 @@ body.light-mode:not([data-theme]) .search-suggestions {
 
 .content.compact .bookmark-description,
 .content.compact .bookmark-tags,
-.content.compact .bookmark-date,
-.content.compact .bookmark-health {
+.content.compact .bookmark-date {
+    display: none;
+}
+/* Compact : de la ligne santé, seul le lien dépôt GitHub reste visible */
+.content.compact .bookmark-health:not(:has(.gh-repo)),
+.content.compact .bookmark-health > :not(.gh-repo) {
     display: none;
 }
 

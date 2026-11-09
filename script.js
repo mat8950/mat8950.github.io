@@ -264,7 +264,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     initUpdatesPanel();
     initStatsPanel();
     initTagsPanel();
-    initImportBookmarks();
     console.log('Rendering folder tree...');
     renderFolderTree();
     console.log('Showing initial folder...');
@@ -703,84 +702,6 @@ function initLicenseFilter() {
     });
     document.addEventListener('click', (e) => { if (!e.target.closest('#license-filter')) close(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
-}
-
-// ─── Import Chrome/Firefox bookmarks ──────────────────────────────────────
-function initImportBookmarks() {
-    const input = document.getElementById('import-bookmarks-input');
-    const zone  = document.getElementById('import-bookmarks-zone');
-    if (!input || !zone) return;
-
-    input.addEventListener('change', e => {
-        const file = e.target.files[0];
-        if (file) processImportFile(file);
-        input.value = '';
-    });
-
-    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
-    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
-    zone.addEventListener('drop', e => {
-        e.preventDefault();
-        zone.classList.remove('drag-over');
-        const file = e.dataTransfer.files[0];
-        if (file) processImportFile(file);
-    });
-}
-
-function processImportFile(file) {
-    const reader = new FileReader();
-    reader.onload = ev => {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(ev.target.result, 'text/html');
-        const links = doc.querySelectorAll('A[HREF]');
-        const existingUrls = new Set(allBookmarks.map(b => b.url));
-        let added = 0;
-
-        links.forEach(a => {
-            const url = a.getAttribute('HREF');
-            const title = a.textContent.trim();
-            if (!url || !title || existingUrls.has(url)) return;
-            if (!url.startsWith('http')) return;
-
-            // Reconstituer le chemin de dossier depuis les H3 parents
-            const folderPath = [];
-            let el = a.parentElement;
-            while (el) {
-                if (el.tagName === 'DL') {
-                    const prev = el.previousElementSibling;
-                    if (prev?.tagName === 'DT') {
-                        const h3 = prev.querySelector('H3');
-                        if (h3) folderPath.unshift(h3.textContent.trim());
-                    }
-                }
-                el = el.parentElement;
-            }
-
-            const bm = { title, url, icon: null, iconUri: null, folder: folderPath.join(' > ') || 'Import', folderPath };
-            allBookmarks.push(bm);
-            existingUrls.add(url);
-            added++;
-        });
-
-        showImportFeedback(added);
-        renderFolderTree();
-        displayBookmarks();
-        const totalEl = document.getElementById('bookmark-total');
-        if (totalEl) totalEl.textContent = allBookmarks.length;
-    };
-    reader.readAsText(file);
-}
-
-function showImportFeedback(count) {
-    const zone = document.getElementById('import-bookmarks-zone');
-    if (!zone) return;
-    const orig = zone.childNodes[0].textContent;
-    zone.childNodes[0].textContent = `✓ ${count} ajoutés`;
-    zone.classList.add('import-success');
-    setTimeout(() => {
-        zone.childNodes[0].textContent = orig;
-        zone.classList.remove('import-success');
-    }, 2500);
 }
 
 // Render folder tree in sidebar

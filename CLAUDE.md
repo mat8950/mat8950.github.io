@@ -386,13 +386,9 @@ Toutes les tailles sont en `rem` pour s'adaater automatiquement à la résolutio
 ### PWA
 
 - `manifest.json` + `sw.js` (service worker)
-- Cache-first pour assets statiques (polices mises en cache à la volée), network-first pour `bookmarks.csv`
+- Network-first (revalidé, `cache: 'no-cache'`) pour les pages, le code et les données (HTML, JS, CSS, CSV, JSON, `api/`) : le cache ne sert que hors ligne. Cache-first pour polices, `lib/`, icônes, images. Précache à l'installation avec `cache: 'reload'` (sinon le cache HTTP de GitHub Pages, `max-age=600`, peut figer une version périmée)
 - `ambient.mp3` n'est pas précaché et l'`<audio>` est en `preload="none"` : 4 Mo chargés seulement au premier PLAY
 - Installable depuis Chrome/Edge via le bouton dans la barre d'adresse
-
-### Import bookmarks externe
-
-Zone `↑ Import .html` en bas de la sidebar : drag & drop ou clic → parse Netscape Bookmark (export Chrome/Firefox), merge sans doublons, re-render immédiat. **Ne modifie pas `bookmarks.html` sur disque** (merge en mémoire uniquement).
 
 ### Suggestions similaires
 

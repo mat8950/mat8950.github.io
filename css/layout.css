@@ -331,44 +331,10 @@ body[data-theme="gruvbox"]     #theme-selector-btn .btn-swatch { background: #fa
     border-bottom: 1px solid var(--border-color);
 }
 
-/* ---- IMPORT DROP ZONE ---- */
-.import-drop-zone {
-    display: block;
-    margin-top: 1.5rem;
-    padding: 0.5rem 0.75rem;
-    border: 1px dashed var(--border-bright);
-    color: var(--text-muted);
-    font-family: var(--font-mono);
-    font-size: 0.6rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    text-align: center;
-    cursor: pointer;
-    transition: var(--transition-ui);
-    user-select: none;
-}
-
-.import-drop-zone:hover,
-.import-drop-zone.drag-over {
-    border-color: var(--text-primary);
-    color: var(--text-primary);
-    background: var(--hover-bg);
-}
-
-.import-drop-zone.drag-over {
-    border-style: solid;
-}
-
-.import-drop-zone.import-success {
-    border-color: var(--text-primary);
-    color: var(--text-primary);
-    border-style: solid;
-}
-
 /* ---- LIEN MENTIONS LÉGALES (bas de sidebar) ---- */
 .legal-link {
     display: block;
-    margin-top: 1rem;
+    margin-top: 1.5rem;
     color: var(--text-muted);
     font-family: var(--font-mono);
     font-size: 0.6rem;

@@ -89,7 +89,7 @@
     .header-btn .badge.hidden { display: inline-flex; visibility: hidden; }
 
     /* Anti-CLS : l'arbre occupe toute la hauteur visible de la sidebar avant le rendu,
-       l'import et le lien mentions sont donc déjà sous la ligne de flottaison (ils ne « sautent » plus) */
+       les liens du bas (guide, mentions) sont donc déjà sous la ligne de flottaison (ils ne « sautent » plus) */
     #folder-tree { min-height: 180px; }
 
     .bookmark-info {
@@ -122,7 +122,7 @@
 
     /* Lisibilité mobile : aucun texte courant sous 12px (html = 13px, donc 0.6rem ≈ 8px sinon) */
     header h1, #search, .header-btn, .theme-option, .badge,
-    .sidebar h2, .folder-item, .folder-count, .import-drop-zone, .legal-link,
+    .sidebar h2, .folder-item, .folder-count, .legal-link,
     #breadcrumb, .sort-label, .sort-btn, .date-option, .filter-chip, .filter-clear-all,
     .bookmark-url, .bookmark-description, .bookmark-date, .tag-pill,
     .gh-stars, .gh-repo, .gh-stale, .gh-archived, .lic-badge, .link-error, .lic-legend-item, .opt-count, .lic-precise-title, .lic-help-link, .bookmark-total, .lazy-loader, #empty-state p,
