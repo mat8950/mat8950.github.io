@@ -422,3 +422,10 @@ Bouton `~` sur chaque carte (visible au hover) → popover avec les 5 bookmarks 
 | n8n / Kestra / Temporal / Windmill | DevOps & Infrastructure > Automatisation & Workflows | Orchestration de workflows, distincte du CI/CD |
 | Apache Airflow | Data & Analytics > Pipelines & Data Engineering | Orchestration de pipelines data |
 | Codeburn / Clawdmeter | IA > Agents de code / Électronique > Embarqué & IoT | Suivi de consommation Claude Code (TUI) / afficheur ESP32 |
+| Elasticsearch | Bases de données > Bases NoSQL & Cache | Moteur de recherche (comme Typesense) ; Logstash / Kibana → Monitoring (usage ELK) |
+| Trivy / Syft / Falco | Cybersécurité > Détection & Vulnérabilités | Scan de vulnérabilités, SBOM (Syft = alternative à Trivy), détection à l'exécution |
+| OpenSCAP / ComplianceAsCode / kube-bench / SELinux | Cybersécurité > Audit & Conformité | Conformité et durcissement |
+| CIS Benchmarks / guide ANSSI BP-028 / VMware SCG / docs Kubernetes (PSS, NetworkPolicy) | Documentation & Learning > Guides & Références | Référentiels et documentation, pas des outils |
+| iDRAC | Utilitaires > Accès distant | Administration hors bande de serveurs (console distante) |
+| Foreman / Red Hat Satellite | DevOps & Infrastructure > Infrastructure as Code | Provisioning et gestion de configuration de parc |
+| Moby / vSphere | non ajoutés | Doublons de Docker / VMware déjà présents |
