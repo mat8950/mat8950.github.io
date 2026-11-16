@@ -1,6 +1,6 @@
 # Marque-pages tech
 
-> Catalogue curé de 979 outils techniques (DevOps, IA, cybersécurité, data, développement, self-hosting), en priorité open-source et auto-hébergeables. Chaque outil a une catégorie, une description en français, des tags, sa licence et, pour les dépôts GitHub, ses étoiles et sa date de dernière activité.
+> Catalogue curé de 1119 outils techniques (DevOps, IA, cybersécurité, data, développement, self-hosting), en priorité open-source et auto-hébergeables. Chaque outil a une catégorie, une description en français, des tags, sa licence et, pour les dépôts GitHub, ses étoiles et sa date de dernière activité.
 
 Mis à jour le 2026-11-16. Site : https://mat8950.github.io/
 
@@ -20,24 +20,32 @@ Mis à jour le 2026-11-16. Site : https://mat8950.github.io/
 
 ## Licences
 
-78 % du catalogue est 100 % libre. Ce que chaque famille autorise (usage interne, modification, SaaS) : [guide des licences](https://mat8950.github.io/licences.html).
+79 % du catalogue est 100 % libre. Ce que chaque famille autorise (usage interne, modification, SaaS) : [guide des licences](https://mat8950.github.io/licences.html).
 
 Répartition par famille (`license_family`, filtre `?licence=`) :
 
 - `libre` (filtre seulement) : regroupe `libre-permissive` et `libre-copyleft` = 100 % logiciel libre.
-- `libre-permissive` (537, 54 %) : Logiciel libre, licence permissive (MIT, Apache-2.0, BSD…)
-- `libre-copyleft` (227, 23 %) : Logiciel libre, licence copyleft (GPL, AGPL, MPL…)
-- `open-core` (24, 2 %) : Open-core : cœur sous licence libre, modules entreprise sous licence commerciale (valeur « X+EE »)
-- `source-available` (66, 6 %) : Code consultable mais non libre (BUSL, SSPL, Elastic, PolyForm, Commons Clause, CC-NC, ou dépôt sans licence)
+- `libre-permissive` (615, 54 %) : Logiciel libre, licence permissive (MIT, Apache-2.0, BSD…)
+- `libre-copyleft` (273, 24 %) : Logiciel libre, licence copyleft (GPL, AGPL, MPL…)
+- `open-core` (27, 2 %) : Open-core : cœur sous licence libre, modules entreprise sous licence commerciale (valeur « X+EE »)
+- `source-available` (70, 6 %) : Code consultable mais non libre (BUSL, SSPL, Elastic, PolyForm, Commons Clause, CC-NC, ou dépôt sans licence)
 - `proprietaire` (23, 2 %) : Propriétaire / SaaS fermé
-- `inconnue` (102, 10 %) : Licence non déterminée
+- `inconnue` (111, 9 %) : Licence non déterminée
 
-Licences précises les plus fréquentes : MIT (323), Apache-2.0 (181), AGPL-3.0 (100), GPL-3.0 (90), CC0-1.0 (16), BSD-3-Clause (15), GPL-2.0 (15), MPL-2.0 (9), BUSL-1.1 (8), CC-BY-SA-4.0 (7), BSD-2-Clause (6), LGPL-2.1 (6), LGPL-3.0 (5), SSPL-1.0 (4), CC-BY-4.0 (3). Liste complète : `license_stats` dans apps.json.
+Licences précises les plus fréquentes : MIT (333), Apache-2.0 (242), AGPL-3.0 (112), GPL-3.0 (99), GPL-2.0 (27), BSD-3-Clause (21), MPL-2.0 (17), CC0-1.0 (16), BUSL-1.1 (10), LGPL-2.1 (10), BSD-2-Clause (9), LGPL-3.0 (8), CC-BY-SA-4.0 (7), SSPL-1.0 (5), CC-BY-4.0 (3). Liste complète : `license_stats` dans apps.json.
 
 ## Catégories
 
 Entre parenthèses : nombre d'outils, part 100 % libre (`libre_percent` dans categories.json).
 
+- [DevOps & Infrastructure](https://mat8950.github.io/devops-infrastructure/) (198, 83 % libre)
+  - [Automatisation & Workflows](https://mat8950.github.io/devops-infrastructure/automatisation-workflows/) (10, 80 % libre)
+  - [CI/CD & Release](https://mat8950.github.io/devops-infrastructure/ci-cd-release/) (16, 100 % libre)
+  - [Conteneurs & Kubernetes](https://mat8950.github.io/devops-infrastructure/conteneurs-kubernetes/) (54, 83 % libre)
+  - [Infrastructure as Code](https://mat8950.github.io/devops-infrastructure/infrastructure-as-code/) (21, 76 % libre)
+  - [Monitoring & Observabilité](https://mat8950.github.io/devops-infrastructure/monitoring-observabilite/) (54, 90 % libre)
+  - [PaaS & Self-hosting](https://mat8950.github.io/devops-infrastructure/paas-self-hosting/) (20, 75 % libre)
+  - [Virtualisation & Cloud](https://mat8950.github.io/devops-infrastructure/virtualisation-cloud/) (23, 73 % libre)
 - [IA & Machine Learning](https://mat8950.github.io/ia-machine-learning/) (190, 78 % libre)
   - [Agents de code](https://mat8950.github.io/ia-machine-learning/agents-de-code/) (26, 92 % libre)
   - [Applications IA](https://mat8950.github.io/ia-machine-learning/applications-ia/) (12, 91 % libre)
@@ -49,66 +57,58 @@ Entre parenthèses : nombre d'outils, part 100 % libre (`libre_percent` dans cat
   - [RAG & Mémoire](https://mat8950.github.io/ia-machine-learning/rag-memoire/) (15, 93 % libre)
   - [Skills & Prompts](https://mat8950.github.io/ia-machine-learning/skills-prompts/) (29, 72 % libre)
   - [Voix & Audio](https://mat8950.github.io/ia-machine-learning/voix-audio/) (23, 78 % libre)
-- [Développement](https://mat8950.github.io/developpement/) (147, 82 % libre)
-  - [API & Tests](https://mat8950.github.io/developpement/api-tests/) (16, 81 % libre)
+- [Développement](https://mat8950.github.io/developpement/) (150, 82 % libre)
+  - [API & Tests](https://mat8950.github.io/developpement/api-tests/) (17, 82 % libre)
   - [Design & UI](https://mat8950.github.io/developpement/design-ui/) (12, 75 % libre)
-  - [Diagrammes & Visualisation](https://mat8950.github.io/developpement/diagrammes-visualisation/) (20, 75 % libre)
-  - [Environnements & Utilitaires](https://mat8950.github.io/developpement/environnements-utilitaires/) (15, 80 % libre)
+  - [Diagrammes & Visualisation](https://mat8950.github.io/developpement/diagrammes-visualisation/) (21, 76 % libre)
+  - [Environnements & Utilitaires](https://mat8950.github.io/developpement/environnements-utilitaires/) (16, 81 % libre)
   - [Front-end & UI](https://mat8950.github.io/developpement/front-end-ui/) (28, 82 % libre)
   - [Git & Forges](https://mat8950.github.io/developpement/git-forges/) (12, 66 % libre)
   - [Langages & Bibliothèques](https://mat8950.github.io/developpement/langages-bibliotheques/) (14, 85 % libre)
   - [Low-code & Outils internes](https://mat8950.github.io/developpement/low-code-outils-internes/) (4, 75 % libre)
   - [Terminal & CLI](https://mat8950.github.io/developpement/terminal-cli/) (19, 100 % libre)
   - [Éditeurs & IDE](https://mat8950.github.io/developpement/editeurs-ide/) (7, 100 % libre)
-- [DevOps & Infrastructure](https://mat8950.github.io/devops-infrastructure/) (124, 77 % libre)
-  - [Automatisation & Workflows](https://mat8950.github.io/devops-infrastructure/automatisation-workflows/) (8, 75 % libre)
-  - [CI/CD & Release](https://mat8950.github.io/devops-infrastructure/ci-cd-release/) (12, 100 % libre)
-  - [Conteneurs & Kubernetes](https://mat8950.github.io/devops-infrastructure/conteneurs-kubernetes/) (32, 78 % libre)
-  - [Infrastructure as Code](https://mat8950.github.io/devops-infrastructure/infrastructure-as-code/) (10, 50 % libre)
-  - [Monitoring & Observabilité](https://mat8950.github.io/devops-infrastructure/monitoring-observabilite/) (34, 88 % libre)
-  - [PaaS & Self-hosting](https://mat8950.github.io/devops-infrastructure/paas-self-hosting/) (14, 64 % libre)
-  - [Virtualisation & Cloud](https://mat8950.github.io/devops-infrastructure/virtualisation-cloud/) (14, 64 % libre)
-- [Cybersécurité](https://mat8950.github.io/cybersecurite/) (110, 73 % libre)
-  - [Audit & Conformité](https://mat8950.github.io/cybersecurite/audit-conformite/) (11, 81 % libre)
-  - [Détection & Vulnérabilités](https://mat8950.github.io/cybersecurite/detection-vulnerabilites/) (14, 64 % libre)
-  - [Identité, Accès & Bastions](https://mat8950.github.io/cybersecurite/identite-acces-bastions/) (8, 62 % libre)
+- [Cybersécurité](https://mat8950.github.io/cybersecurite/) (147, 78 % libre)
+  - [Audit & Conformité](https://mat8950.github.io/cybersecurite/audit-conformite/) (13, 84 % libre)
+  - [Détection & Vulnérabilités](https://mat8950.github.io/cybersecurite/detection-vulnerabilites/) (29, 75 % libre)
+  - [Identité, Accès & Bastions](https://mat8950.github.io/cybersecurite/identite-acces-bastions/) (11, 72 % libre)
   - [OSINT & Renseignement](https://mat8950.github.io/cybersecurite/osint-renseignement/) (20, 75 % libre)
-  - [Offensif & Reverse](https://mat8950.github.io/cybersecurite/offensif-reverse/) (21, 85 % libre)
-  - [Réseau, VPN & Filtrage](https://mat8950.github.io/cybersecurite/reseau-vpn-filtrage/) (24, 66 % libre)
-  - [Secrets & Certificats](https://mat8950.github.io/cybersecurite/secrets-certificats/) (12, 75 % libre)
-- [Utilitaires](https://mat8950.github.io/utilitaires/) (86, 83 % libre)
-  - [Accès distant](https://mat8950.github.io/utilitaires/acces-distant/) (13, 76 % libre)
+  - [Offensif & Reverse](https://mat8950.github.io/cybersecurite/offensif-reverse/) (23, 82 % libre)
+  - [Réseau, VPN & Filtrage](https://mat8950.github.io/cybersecurite/reseau-vpn-filtrage/) (33, 75 % libre)
+  - [Secrets & Certificats](https://mat8950.github.io/cybersecurite/secrets-certificats/) (18, 83 % libre)
+- [Utilitaires](https://mat8950.github.io/utilitaires/) (92, 83 % libre)
+  - [Accès distant](https://mat8950.github.io/utilitaires/acces-distant/) (14, 78 % libre)
   - [Dashboards & Homelab](https://mat8950.github.io/utilitaires/dashboards-homelab/) (6, 100 % libre)
   - [Documents & PDF](https://mat8950.github.io/utilitaires/documents-pdf/) (16, 87 % libre)
-  - [Fichiers, Sync & Sauvegarde](https://mat8950.github.io/utilitaires/fichiers-sync-sauvegarde/) (14, 64 % libre)
+  - [Fichiers, Sync & Sauvegarde](https://mat8950.github.io/utilitaires/fichiers-sync-sauvegarde/) (19, 68 % libre)
   - [Lecture, Édition & Capture](https://mat8950.github.io/utilitaires/lecture-edition-capture/) (15, 100 % libre)
   - [Serveurs média & Streaming](https://mat8950.github.io/utilitaires/serveurs-media-streaming/) (12, 91 % libre)
   - [Téléchargement de médias](https://mat8950.github.io/utilitaires/telechargement-de-medias/) (10, 70 % libre)
-- [Documentation & Learning](https://mat8950.github.io/documentation-learning/) (85, 65 % libre)
+- [Documentation & Learning](https://mat8950.github.io/documentation-learning/) (88, 63 % libre)
   - [Awesome lists & Annuaires](https://mat8950.github.io/documentation-learning/awesome-lists-annuaires/) (42, 76 % libre)
   - [Cours & Formation](https://mat8950.github.io/documentation-learning/cours-formation/) (19, 73 % libre)
-  - [Guides & Références](https://mat8950.github.io/documentation-learning/guides-references/) (24, 41 % libre)
-- [Systèmes d'exploitation](https://mat8950.github.io/systemes-d-exploitation/) (68, 75 % libre)
+  - [Guides & Références](https://mat8950.github.io/documentation-learning/guides-references/) (27, 37 % libre)
+- [Systèmes d'exploitation](https://mat8950.github.io/systemes-d-exploitation/) (75, 70 % libre)
   - [Boot & Installation](https://mat8950.github.io/systemes-d-exploitation/boot-installation/) (5, 80 % libre)
-  - [Distributions Linux](https://mat8950.github.io/systemes-d-exploitation/distributions-linux/) (12, 16 % libre)
-  - [Linux : Outils & Bureau](https://mat8950.github.io/systemes-d-exploitation/linux-outils-bureau/) (11, 81 % libre)
+  - [Distributions Linux](https://mat8950.github.io/systemes-d-exploitation/distributions-linux/) (18, 16 % libre)
+  - [Linux : Outils & Bureau](https://mat8950.github.io/systemes-d-exploitation/linux-outils-bureau/) (12, 83 % libre)
   - [Mobile (Android & iOS)](https://mat8950.github.io/systemes-d-exploitation/mobile-android-ios/) (11, 100 % libre)
   - [Windows & Compatibilité](https://mat8950.github.io/systemes-d-exploitation/windows-compatibilite/) (14, 85 % libre)
   - [macOS](https://mat8950.github.io/systemes-d-exploitation/macos/) (15, 86 % libre)
-- [Productivité & Collaboration](https://mat8950.github.io/productivite-collaboration/) (55, 72 % libre)
-  - [CRM, ERP & Gestion](https://mat8950.github.io/productivite-collaboration/crm-erp-gestion/) (9, 66 % libre)
+- [Productivité & Collaboration](https://mat8950.github.io/productivite-collaboration/) (57, 73 % libre)
+  - [CRM, ERP & Gestion](https://mat8950.github.io/productivite-collaboration/crm-erp-gestion/) (11, 72 % libre)
   - [Communication & Suites](https://mat8950.github.io/productivite-collaboration/communication-suites/) (8, 62 % libre)
   - [Finance](https://mat8950.github.io/productivite-collaboration/finance/) (7, 71 % libre)
   - [Notes & Connaissances](https://mat8950.github.io/productivite-collaboration/notes-connaissances/) (14, 78 % libre)
   - [Projets & Tâches](https://mat8950.github.io/productivite-collaboration/projets-taches/) (10, 80 % libre)
   - [Veille & Lecture](https://mat8950.github.io/productivite-collaboration/veille-lecture/) (7, 71 % libre)
-- [Bases de données](https://mat8950.github.io/bases-de-donnees/) (29, 96 % libre)
-  - [Analytique & OLAP](https://mat8950.github.io/bases-de-donnees/analytique-olap/) (4, 100 % libre)
-  - [Bases NoSQL & Cache](https://mat8950.github.io/bases-de-donnees/bases-nosql-cache/) (7, 85 % libre)
-  - [Bases relationnelles](https://mat8950.github.io/bases-de-donnees/bases-relationnelles/) (5, 100 % libre)
-  - [Outils DB](https://mat8950.github.io/bases-de-donnees/outils-db/) (13, 100 % libre)
-- [Data & Analytics](https://mat8950.github.io/data-analytics/) (29, 93 % libre)
-  - [Pipelines & Data Engineering](https://mat8950.github.io/data-analytics/pipelines-data-engineering/) (11, 100 % libre)
+- [Bases de données](https://mat8950.github.io/bases-de-donnees/) (34, 97 % libre)
+  - [Analytique & OLAP](https://mat8950.github.io/bases-de-donnees/analytique-olap/) (5, 100 % libre)
+  - [Bases NoSQL & Cache](https://mat8950.github.io/bases-de-donnees/bases-nosql-cache/) (9, 88 % libre)
+  - [Bases relationnelles](https://mat8950.github.io/bases-de-donnees/bases-relationnelles/) (6, 100 % libre)
+  - [Outils DB](https://mat8950.github.io/bases-de-donnees/outils-db/) (14, 100 % libre)
+- [Data & Analytics](https://mat8950.github.io/data-analytics/) (32, 93 % libre)
+  - [Pipelines & Data Engineering](https://mat8950.github.io/data-analytics/pipelines-data-engineering/) (14, 100 % libre)
   - [Visualisation & BI](https://mat8950.github.io/data-analytics/visualisation-bi/) (18, 88 % libre)
 - [Loisirs & Vie perso](https://mat8950.github.io/loisirs-vie-perso/) (29, 86 % libre)
   - [Jeux & Émulation](https://mat8950.github.io/loisirs-vie-perso/jeux-emulation/) (18, 88 % libre)

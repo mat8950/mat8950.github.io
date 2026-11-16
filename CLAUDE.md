@@ -429,3 +429,20 @@ Bouton `~` sur chaque carte (visible au hover) → popover avec les 5 bookmarks 
 | iDRAC | Utilitaires > Accès distant | Administration hors bande de serveurs (console distante) |
 | Foreman / Red Hat Satellite | DevOps & Infrastructure > Infrastructure as Code | Provisioning et gestion de configuration de parc |
 | Moby / vSphere | non ajoutés | Doublons de Docker / VMware déjà présents |
+| Traefik / nginx / HAProxy / Caddy / Keepalived / Backstage | DevOps & Infrastructure > PaaS & Self-hosting | Reverse proxy, load balancer, HA et portail développeur (pas de sous-catégorie dédiée) |
+| Istio / Linkerd / Envoy / Consul / Nomad / Rook / MetalLB / ExternalDNS | DevOps & Infrastructure > Conteneurs & Kubernetes | Service mesh, orchestration, stockage et réseau Kubernetes |
+| AWX / Salt / Puppet / Rudder / Uyuni / Crossplane / Pulumi / Molecule / Ansible Lint / TFLint | DevOps & Infrastructure > Infrastructure as Code | Gestion de configuration, provisioning et outils autour d'Ansible / Terraform (comme Foreman, Satellite) |
+| Semaphore UI / Argo Workflows | DevOps & Infrastructure > Automatisation & Workflows | Orchestration de tâches et de workflows |
+| Checkov / Kubescape / Semgrep / osquery / Fleet / Wazuh / Fail2ban / ClamAV / OpenVAS / Zeek / MISP / OpenCTI / Velociraptor / Grype / Tracee | Cybersécurité > Détection & Vulnérabilités | La sécurité prime (IaC, SAST, SIEM, threat intel, forensique) |
+| Kyverno / OPA | Cybersécurité > Audit & Conformité | Politiques as code |
+| OpenBao / SOPS / External Secrets / Vaultwarden / Passbolt / step-ca | Cybersécurité > Secrets & Certificats | Secrets, mots de passe, PKI |
+| BIND / Unbound / CoreDNS / PowerDNS / Kea / OPNsense / Headscale / OpenVPN / Pi-hole | Cybersécurité > Réseau, VPN & Filtrage | DNS, DHCP, pare-feu, VPN |
+| Nmap / Metasploit | Cybersécurité > Offensif & Reverse | Scan réseau et pentest |
+| phpIPAM / GLPI | Productivité & Collaboration > CRM, ERP & Gestion | Gestion d'actifs IT (comme NetBox) |
+| Restic / Borg / Kopia / Bareos / Duplicati | Utilitaires > Fichiers, Sync & Sauvegarde | Sauvegarde ; pgBackRest → Bases de données > Outils DB, CloudNativePG → Bases relationnelles |
+| Kafka / RabbitMQ / NATS | Data & Analytics > Pipelines & Data Engineering | Streaming et messagerie (pas de sous-catégorie dédiée) |
+| InfluxDB / OpenSearch / etcd | Bases de données (Analytique & OLAP / NoSQL & Cache) | Séries temporelles, moteur de recherche, clé-valeur |
+| Talos / Flatcar / AlmaLinux / NixOS / Alpine / openSUSE | Systèmes d'exploitation > Distributions Linux | OS immuables et distributions serveur |
+| TrueNAS / Ceph / KubeVirt / Harvester / libvirt / QEMU / Incus / OpenNebula / Xen Orchestra | DevOps & Infrastructure > Virtualisation & Cloud | Hyperviseurs, stockage, cloud privé |
+| ADR / C4 / arc42 | Documentation & Learning > Guides & Références | Méthodes de documentation d'architecture |
+| Boundary / TheHive / Structurizr DSL | non ajoutés | Dépôts archivés (Boundary, TheHive) ou introuvable (Structurizr DSL) |
