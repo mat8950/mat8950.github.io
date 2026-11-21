@@ -1146,3 +1146,10 @@ https://alpinelinux.org
 https://www.flatcar.org
 https://www.opensuse.org
 https://www.truenas.com
+https://www.waveterm.dev/
+https://ghostty.org/
+https://wezterm.org/
+https://sw.kovidgoyal.net/kitty/
+https://zellij.dev/
+https://github.com/xwmx/nb
+https://github.com/zk-org/zk
